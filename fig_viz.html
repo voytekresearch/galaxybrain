@@ -1,0 +1,128 @@
+<!doctype = HTML> 
+<head>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    
+    <style>
+       body {
+           background-color: white;
+       }
+/* 
+       #spectra {
+        width: 100px;
+       }
+
+       #correlations {
+        width: 100px;
+      height: 100px;
+      background: red;
+       } */
+
+       #measures {
+        width: 100px;
+       }
+
+       h1 {
+           font-family: Arial, Helvetica, sans-serif;
+           font-size: 50px;
+       }
+
+       h2 {
+           font-family: Arial, Helvetica, sans-serif;
+           font-size: 35px;
+       }
+
+       h3 {
+           font-family: Arial, Helvetica, sans-serif;
+           font-size: 25px;
+       }
+
+       p {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 20px;
+       }
+
+
+
+    </style>
+</head>
+<body>
+        <h1>Figures</h1>
+        <!-- <div id = "container">
+            <div id = "spectra" style="float: left; margin-right: 800px;"></div>
+            <div id = "correlations" style="float: left; margin-right: 200px;"></div>
+        </div> -->
+
+
+        <div id="measures" style="float: left; margin-right: 800px;"></div>
+
+
+
+    <script>
+        // to do this programatically
+    
+        filenames = ["krebs_all_measures",
+                    "krebs_CP_measures",
+                    "krebs_HPF_measures",
+                    "krebs_LS_measures",
+                    "krebs_MB_measures",
+                    "krebs_TH_measures",
+                    "krebs_V1_measures",
+                    "robbins_all_measures",
+                    "robbins_FrMoCtx_measures",
+                    "robbins_HPF_measures",
+                    "robbins_LS_measures",
+                    "robbins_RSP_measures",
+                    "robbins_SomMoCtx_measures",
+                    "robbins_TH_measures",
+                    "robbins_V1_measures",
+                    "robbins_V2_measures",
+                    "waksman_all_measures",
+                    "waksman_CP_measures",
+                    "waksman_HPF_measures",
+                    "waksman_TH_measures",]
+
+        var regions = ['all',
+                        'V2',
+                        'V1',
+                        'TH',
+                        'SomMoCtx',
+                        'RSP',
+                        'MB',
+                        'LS',
+                        'HPF',
+                        'FrMoCtx',
+                        'CP']
+
+        var mice = ['krebs', 'robbins', 'waksman']
+
+        for (var r = 0; r < regions.length; r++) {
+            let title = d3.select("#measures")
+                                .append('h2')
+                                .text(function(d){
+                                        return regions[r];
+                                })
+            console.log(5);
+            for (var m = 0; m < mice.length; m++) {
+                if (filenames.includes(mice[m] + '_' + regions[r] + '_measures')) {
+                    let sub_header = d3.select("#measures")
+                                .append('h3')
+                                .text(function(d){
+                                        return mice[m];
+                                })
+
+                    let fig_div = d3.select("#measures")
+                                .append('img')
+                                .attr('src', './fig/vis/'+ mice[m] + '_' + regions[r] + '_measures.png');
+
+                                
+                                
+                }
+            }
+        }
+        
+       
+
+    </script>
+</body>
