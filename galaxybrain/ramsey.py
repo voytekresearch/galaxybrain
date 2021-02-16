@@ -24,9 +24,10 @@ def fooofy(components, spectra, freq_range, group = True):
 
     fg.fit(components, spectra, freq_range) # THIS IS WHERE YOU SAY WHICH FREQ RANGE TO FIT
     m_array = fg.get_params('aperiodic_params', 'exponent')
-    r2_array = fg.get_params('r_squared') #correlation between components (freqs or PCs) and spectra (powers or eigvals)
+    #r2_array = fg.get_params('r_squared') #correlation between components (freqs or PCs) and spectra (powers or eigvals)
+    er_array = fg.get_params('error')
     #fg.r_squared_
-    return m_array, r2_array
+    return m_array, er_array
 
 def pca_on_data(subset, n_pc):
     """
@@ -48,9 +49,8 @@ def ft_on_data(subset, fs, nperseg, noverlap):
 
     return freqs, powers
 
-
 #set non as default!
-def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, shuffle = None, verbose = False):
+def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, verbose = False):
     """shuffle: either 'space' or 'time' to destroy correlations differently"""
     #Make these parameters for main func later
     fs=1; nperseg=120; noverlap=60
@@ -61,16 +61,7 @@ def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, shu
     powers_mat = np.zeros((n_iter, len(freqs)))
 
     for i in np.arange(n_iter):
-        if shuffle == 'space': #remember to switch these 
-            s_ind = np.arange(data.shape[0]) 
-            np.random.shuffle(s_ind)
-            raster_curr = data.iloc[s_ind]
-        elif shuffle == 'time': #remember to switch these 
-            t_ind = np.arange(data.shape[1])
-            np.random.shuffle(t_ind)
-            raster_curr = data.iloc[:,t_ind]
-        else:
-            raster_curr = data
+        raster_curr = data
 
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
         subset = raster_curr.iloc[:,loc_array]
@@ -83,12 +74,9 @@ def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, shu
         freqs, powers = ft_on_data(subset, fs, nperseg, noverlap)
         powers_mat[i] = powers
 
-#     print('PCA')
     e_axis = np.arange(1,n_pc+1)
-#     print(e_axis.shape, evals_mat.shape, pc_range)
-    pca_m_array, pca_r2_array = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and r2
-#     print('PSD')
-    ft_m_array, ft_r2_array = fooofy(freqs, powers_mat, f_range) #time decomposition exponents, and r2
+    pca_m_array, pca_er_array = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
+    ft_m_array, ft_er_array = fooofy(freqs, powers_mat, f_range) #time decomposition exponents, and er
 
     if verbose == True:
 
@@ -104,29 +92,26 @@ def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, shu
         plt.title('Time Decomp')
         plt.plot()
 
-    return evals_mat, pca_m_array, pca_r2_array, powers_mat, ft_m_array, ft_r2_array
+    return evals_mat, pca_m_array, pca_er_array, powers_mat, ft_m_array, ft_er_array
 
-def ramsey(data, subset_sizes, n_iters = 150, n_pc = None, pc_range = [0,None], f_range = [0,None], shuffle = None, verbose = True):
+def ramsey(data, subset_sizes, n_iters = 150, n_pc = None, pc_range = [0,None], f_range = [0,None]):
+    """Do random_subset_decomp over incrementing subset sizes"""
     n = len(subset_sizes)
 
-    #size = np.arange(0,n)
-    #eigs = np.zeros((n_iters, n)) #right dims?
+    #these could also be np.zeros((n_iters, n)) (but check dims)
     eigs = []
-    #powers = np.zeros((n_iters, n))
     powers = []
 
     pca_m = np.zeros((n_iters, n)) # dims: n_iters * amount of subset sizes
     ft_m = np.zeros((n_iters, n))
 
-    space_r2 = np.zeros((n_iters, n))
-    time_r2 = np.zeros((n_iters, n))
+    space_er = np.zeros((n_iters, n))
+    time_er = np.zeros((n_iters, n))
 
     pearson_r = np.zeros(n)
     pearson_p = np.zeros(n)
     spearman_rho = np.zeros(n)
     spearman_p = np.zeros(n)
-
-    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.inferno(np.linspace(0,1,n)))
 
     for i, n_i in enumerate(subset_sizes):
 
@@ -165,47 +150,25 @@ def ramsey(data, subset_sizes, n_iters = 150, n_pc = None, pc_range = [0,None], 
         elif f_range[1] == None:
             curr_f_range = None
 
+        evs, ev_m, ev_er, pows, pow_m, pow_er = random_subset_decomp(data, n_i, n_iters, n_pc_curr , pc_range = curr_pc_range, f_range = curr_f_range) #remember to add parameters later, check function doc for output
 
-        evs, ev_m, ev_r2, pows, pow_m, pow_r2 = random_subset_decomp(data, n_i, n_iters, n_pc_curr , pc_range = curr_pc_range, f_range = curr_f_range, shuffle = shuffle) #remember to add parameters later, check function doc for output
-
-        #this was commented out so no data was saved for past 2 experiments
-        # eigs[:,i] = evs.mean(0)
-        # powers[:,i] = pows.mean(0)
-        eigs.append(evs.mean(0))
+        #append average across iterations
+        eigs.append(evs.mean(0)) 
         powers.append(pows.mean(0))
 
         pca_m[:,i] = ev_m
         ft_m[:,i] = pow_m
 
-        space_r2[:,i] = ev_r2
-        time_r2[:,i] = pow_r2
+        space_er[:,i] = ev_er
+        time_er[:,i] = pow_er
 
         #This is where you'd start resampling (iteratively)
         pearson_r[i], pearson_p[i] = stats.pearsonr(ev_m, pow_m)
         spearman_rho[i], spearman_p[i] = stats.spearmanr(ev_m, pow_m)
+    #eigs, pows are 2d
+    return eigs, powers, pca_m, space_er, ft_m, time_er, pearson_r, spearman_rho, pearson_p, spearman_p
 
-        if verbose == True:
-
-            if i == 0: #only creates figure for the first iter, then it just plots over
-                plt.figure(figsize=(10,5))
-
-            # plot eigenspectrum
-            plt.subplot(1,2,1)
-            #plt.loglog(np.arange(1,n_pc+1), evs.T, 'k', lw=1, alpha=0.2)
-            #plt.loglog(np.arange(1,n_pc+1), evs.mean(0), 'r')
-            plt.errorbar(np.arange(1,n_pc_curr+1)/n_pc_curr, evs.mean(0), evs.std(0))
-            plt.yscale('log'); plt.xscale('log');
-
-            #plot powerspectrum
-            plt.subplot(1,2,2)
-            #plt.loglog(np.arange(0,0.505,0.005), pows.T, 'k', lw=1, alpha=0.2)
-            #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0), 'r')
-            plt.errorbar(np.arange(0,61/120, 1/120), pows.mean(0), pows.std(0))
-            plt.yscale('log'); plt.xscale('log');
-
-    return eigs, powers, pca_m, space_r2, ft_m, time_r2, pearson_r, spearman_rho, pearson_p, spearman_p
-
-def plot_all_measures(subsetsizes, space_r2, time_r2, n_iters, n_pc, f_range, pc_range, eigs, pows, space_slopes, time_slopes, pearson_corr, spearman_corr, pearson_p, spearman_p, figsize = (23,8)):
+def plot_all_measures(subsetsizes, space_er, time_er, n_iters, n_pc, f_range, pc_range, eigs, pows, space_slopes, time_slopes, pearson_corr, spearman_corr, pearson_p, spearman_p, figsize = (23,8)):
 
     """
     Plots everything from above
@@ -275,14 +238,14 @@ def plot_all_measures(subsetsizes, space_r2, time_r2, n_iters, n_pc, f_range, pc
 
     #PCA goodness of fit
     plt.subplot(2,5,3)
-    plt.plot(subsetsizes[:], space_r2.T[:], ".", color = 'purple', lw=1, alpha=0.2)
+    plt.plot(subsetsizes[:], space_er.T[:], ".", color = 'purple', lw=1, alpha=0.2)
     plt.title('Correlation between PCs and eigenvalues \n at subset size')
     plt.xlabel('Subset Size')
     plt.ylabel('r\u00b2')
 
     #FFT goodness of fit
     plt.subplot(2,5,8)
-    plt.plot(subsetsizes[:], time_r2.T[:],  ".", color = 'purple', lw=1, alpha=0.2)
+    plt.plot(subsetsizes[:], time_er.T[:],  ".", color = 'purple', lw=1, alpha=0.2)
     plt.title('Correlation between frequencies and powers \n at subset size')
     plt.xlabel('Subset Size')
     plt.ylabel('r\u00b2')
