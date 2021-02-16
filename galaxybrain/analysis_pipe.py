@@ -18,15 +18,13 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-
-
 def shuffle_data(data, axis):
     """Helper function to shuffle data"""
-    if axis == 'space': #remember to switch these 
+    if axis == 'time':
         s_ind = np.arange(data.shape[0]) 
         np.random.shuffle(s_ind)
         raster_curr = data.iloc[s_ind]
-    elif axis == 'time': #remember to switch these 
+    elif axis == 'space':
         t_ind = np.arange(data.shape[1])
         np.random.shuffle(t_ind)
         raster_curr = data.iloc[:,t_ind]
@@ -67,7 +65,12 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                         curr_output.append([eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p])
                     # AVG ACROSS TRIALS HERE
                     curr_output = np.array(curr_output)
-                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}', eigs=curr_output[:,0].mean(0), pows=curr_output[:,1].mean(0), pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
+                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
+                                                                                    pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
+                                                                                    pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
+                                                                                    ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
+                                                                                    pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
+                                                                                    pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
             else:
                 for i in range(num_trials):
                     eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p = ramsey.ramsey(mouse_raster, subsetsizes, **ramsey_params)
@@ -101,7 +104,7 @@ if __name__ == '__main__':
 
     run_analysis(output_dir = '../data/experiments/expTEST',
                 mice_regions = mice_regions,
-                ramsey_params = {'n_iters' : 3, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
-                num_trials = 2,
+                ramsey_params = {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
+                num_trials = 4,
                 mouse_in = ['krebs'],
-                shuffle = ('space',4))
+                shuffle = ('space',5))
