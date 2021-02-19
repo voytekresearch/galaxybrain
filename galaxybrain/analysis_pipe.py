@@ -7,10 +7,9 @@ import pandas as pd
 from sklearn.decomposition import PCA
 import fooof
 from fooof import FOOOFGroup
-from seaborn import despine
 
-from galaxybrain.data_utils import load_mouse_data, return_pops
-from galaxybrain import ramsey
+from data_utils import load_mouse_data, return_pops
+import ramsey
 from neurodsp.spectral import compute_spectrum
 
 import warnings
