@@ -17,16 +17,16 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-def shuffle_data(data, axis):
+def shuffle_data(data, axis): 
     """Helper function to shuffle data"""
     if axis == 'time':
-        s_ind = np.arange(data.shape[0]) 
-        np.random.shuffle(s_ind)
-        raster_curr = data.iloc[s_ind]
-    elif axis == 'space':
-        t_ind = np.arange(data.shape[1])
+        t_ind = np.arange(data.shape[0]) 
         np.random.shuffle(t_ind)
-        raster_curr = data.iloc[:,t_ind]
+        raster_curr = data.iloc[t_ind]
+    elif axis == 'space':
+        s_ind = np.arange(data.shape[1])
+        np.random.shuffle(s_ind)
+        raster_curr = data.iloc[:,s_ind]
     return raster_curr
 
 def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 20, shuffle = False, mouse_in = ['krebs', 'robbins', 'waksman']):

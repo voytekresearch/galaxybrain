@@ -7,6 +7,8 @@ from fooof import FOOOFGroup, FOOOF
 from scipy import io, signal, stats
 from neurodsp.spectral import compute_spectrum
 
+from numba import jit
+
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
@@ -50,6 +52,7 @@ def ft_on_data(subset, fs, nperseg, noverlap):
     return freqs, powers
 
 #set non as default!
+@jit(nopython=True)
 def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, verbose = False):
     """shuffle: either 'space' or 'time' to destroy correlations differently"""
     #Make these parameters for main func later
@@ -64,7 +67,7 @@ def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, ver
         raster_curr = data
 
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
-        subset = raster_curr.iloc[:,loc_array]
+        subset = np.array(raster_curr.iloc[:,loc_array]) #currently converted to array for testing jit
 
         # decomposition in space
         evals = pca_on_data(subset, n_pc)
@@ -239,16 +242,16 @@ def plot_all_measures(subsetsizes, space_er, time_er, n_iters, n_pc, f_range, pc
     #PCA goodness of fit
     plt.subplot(2,5,3)
     plt.plot(subsetsizes[:], space_er.T[:], ".", color = 'purple', lw=1, alpha=0.2)
-    plt.title('Correlation between PCs and eigenvalues \n at subset size')
+    plt.title('Fit error for eigenspectrum \n at subset size')
     plt.xlabel('Subset Size')
-    plt.ylabel('r\u00b2')
+    plt.ylabel('error')
 
     #FFT goodness of fit
     plt.subplot(2,5,8)
     plt.plot(subsetsizes[:], time_er.T[:],  ".", color = 'purple', lw=1, alpha=0.2)
-    plt.title('Correlation between frequencies and powers \n at subset size')
+    plt.title('Fit error for power spectrum \n at subset size')
     plt.xlabel('Subset Size')
-    plt.ylabel('r\u00b2')
+    plt.ylabel('error')
 
     #Pearson (R) Correlation value as function of subset size
     n_trials = pearson_corr.shape[0]
