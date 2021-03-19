@@ -51,7 +51,6 @@ def ft_on_data(subset, fs, nperseg, noverlap):
 
     return freqs, powers
 
-#set non as default!
 @jit(nopython=True)
 def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, verbose = False):
     """shuffle: either 'space' or 'time' to destroy correlations differently"""

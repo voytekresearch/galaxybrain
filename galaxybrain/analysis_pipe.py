@@ -7,15 +7,22 @@ import pandas as pd
 from sklearn.decomposition import PCA
 import fooof
 from fooof import FOOOFGroup
+from neurodsp.spectral import compute_spectrum
 
 from data_utils import load_mouse_data, return_pops
 import ramsey
-from neurodsp.spectral import compute_spectrum
+
+import multiprocessing as mp
+from pathos.multiprocessing import ProcessingPool as Pool
 
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
+
+#Parallel stuff
+cores = mp.cpu_count()
+pool = mp.Pool(mp.cpu_count())
 
 def shuffle_data(data, axis): 
     """Helper function to shuffle data"""
@@ -57,11 +64,15 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
             if shuffle:
                 for s in range(shuffle[1]):
                     curr_raster = shuffle_data(mouse_raster, shuffle[0]) 
-                    curr_output = {'eigs':[],'pows':[],'pca_m':[],'s_er':[],'ft_m':[],'t_er':[],'psn_r':[], 'spn_r':[], 'psn_p':[], 'spn_p':[]}
+                    #curr_output = {'eigs':[],'pows':[],'pca_m':[],'s_er':[],'ft_m':[],'t_er':[],'psn_r':[], 'spn_r':[], 'psn_p':[], 'spn_p':[]}
                     curr_output = []
                     for n in range(num_trials):
                         eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p = ramsey.ramsey(curr_raster, subsetsizes, **ramsey_params)
                         curr_output.append([eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p])
+                    
+                    ### PARALLEL PSEUDO
+                    #curr_output = [pool.apply(ramsey.ramsey, args = (curr_raster, subsetsizes, **ramsey_params) for n in range num_trials)]
+                    
                     # AVG ACROSS TRIALS HERE
                     curr_output = np.array(curr_output)
                     np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
