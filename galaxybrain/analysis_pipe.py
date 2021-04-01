@@ -2,6 +2,8 @@ import numpy as np
 from scipy import io, signal, stats
 import sys, os
 sys.path.append('../')
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
 
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -13,7 +15,6 @@ from data_utils import load_mouse_data, return_pops
 import ramsey
 
 import multiprocessing as mp
-from pathos.multiprocessing import ProcessingPool as Pool
 
 import warnings
 import matplotlib.cbook
@@ -31,9 +32,7 @@ def shuffle_data(data, axis):
         np.random.shuffle(t_ind)
         raster_curr = data.iloc[t_ind]
     elif axis == 'space':
-        s_ind = np.arange(data.shape[1])
-        np.random.shuffle(s_ind)
-        raster_curr = data.iloc[:,s_ind]
+        raster_curr = data.apply(np.random.permutation, axis=1)
     return raster_curr
 
 def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 20, shuffle = False, mouse_in = ['krebs', 'robbins', 'waksman'],parallel=True):
@@ -96,7 +95,7 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                     np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{i+1}', eigs=eigs, pows=pows, pca_m=pca_m, space_er=s_er, ft_m=ft_m, time_er=t_er, pearson_r=psn_r, spearman_rho=spn_r, pearson_p=psn_p, spearman_p=spn_p)
         
         if parallel:
-            results = [pool.apply(ramsey.ramsey, args = (curr_raster_, subsetsizes_, n_iters, n_pc, f_range)) for (curr_raster_,subsetsizes_) in parallel_args]
+            results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
             for label, i in zip(parallel_labels, np.arange(0,len(results), num_trials)):
                 region_name, s = label[0], label[1]
                 curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after

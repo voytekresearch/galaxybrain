@@ -51,7 +51,7 @@ def ft_on_data(subset, fs, nperseg, noverlap):
 
     return freqs, powers
 
-@jit(nopython=True)
+#@jit(nopython=True) # jit not working because I think the data passed in has to be array
 def random_subset_decomp(data, subset_size, n_iter, n_pc, pc_range, f_range, verbose = False):
     """shuffle: either 'space' or 'time' to destroy correlations differently"""
     #Make these parameters for main func later
