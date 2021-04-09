@@ -32,7 +32,7 @@ def shuffle_data(data, axis):
         np.random.shuffle(t_ind)
         raster_curr = data.iloc[t_ind]
     elif axis == 'space':
-        raster_curr = data.apply(np.random.permutation, axis=1)
+        raster_curr = data.apply(np.random.permutation, axis=1, result_type='broadcast') #need broadcast to maintain shape
     return raster_curr
 
 def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 20, shuffle = False, mouse_in = ['krebs', 'robbins', 'waksman'],parallel=True):
