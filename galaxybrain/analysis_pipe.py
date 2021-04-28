@@ -96,15 +96,16 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
         
         if parallel:
             results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
-            for label, i in zip(parallel_labels, np.arange(0,len(results), num_trials)):
-                region_name, s = label[0], label[1]
+            pool.close()
+            for i in np.arange(0,len(results), num_trials):
+                region_name, s = parallel_labels[i][0], parallel_labels[i][1]
                 curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
                 np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
-                                                                                    pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
-                                                                                    pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
-                                                                                    ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
-                                                                                    pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
-                                                                                    pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
+                                                                                pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
+                                                                                pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
+                                                                                ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
+                                                                                pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
+                                                                                pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
             
 ### SCRIPT ###
 if __name__ == '__main__':
