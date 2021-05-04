@@ -1,15 +1,11 @@
 import numpy as np
-from scipy import io, signal, stats
 import sys, os
+import json
 sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
-import pandas as pd
 from sklearn.decomposition import PCA
-import fooof
-from fooof import FOOOFGroup
-from neurodsp.spectral import compute_spectrum
 
 from data_utils import load_mouse_data, return_pops
 import ramsey
@@ -134,9 +130,18 @@ if __name__ == '__main__':
                 'robbins': [robbins, [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)]],
                 'waksman': [waksman, [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)]] }
 
-    run_analysis(output_dir = '../data/experiments/expTEST',
-                mice_regions = mice_regions,
-                ramsey_params = {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
-                num_trials = 4,
-                mouse_in = ['krebs'],
-                shuffle = ('space',5))
+    analysis_args={'output_dir' : '../data/experiments/expTEST',
+                    'mice_regions' : mice_regions,
+                    'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
+                    'num_trials' : 4,
+                    'mouse_in' : ['krebs'],
+                    'shuffle' : ('space',5)}
+    
+    run_analysis(**analysis_args)
+
+    analysis_args['mice_regions'] = 'mice_regions_var'
+
+    with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
+        json.dump(analysis_args, f, indent=1)
+
+

@@ -210,14 +210,9 @@ def plot_all_measures(subsetsizes, space_er, time_er, n_iters, n_pc, f_range, pc
         #plt.loglog(np.arange(1,n_pc+1), evs.T, 'k', lw=1, alpha=0.2)
         #plt.loglog(np.arange(1,n_pc+1), evs.mean(0), 'r')
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
-        
-        plt.plot(range(len(mean_evs)), mean_evs) #KEEP THIS LINE: actual PCs
         plt.yscale('log'); plt.xscale('log');
         plt.title('Eigenvalue Spectrum')
         plt.xlabel('PC dimension'); plt.ylabel('Variance')
-        # except:
-        print(f'n_pc_curr: {len(np.arange(1,n_pc_curr+1))}')
-        print(f'evs: {mean_evs.shape}')
         #plot powerspectrum
         plt.subplot(2,5,6)
         #plt.loglog(np.arange(0,0.505,0.005), pows.T, 'k', lw=1, alpha=0.2)

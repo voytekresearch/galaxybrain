@@ -1,0 +1,20 @@
+{
+ "output_dir": "../data/experiments/expTEST",
+ "mice_regions": 0,
+ "ramsey_params": {
+  "n_iters": 95,
+  "n_pc": 0.8,
+  "f_range": [
+   0,
+   0.4
+  ]
+ },
+ "num_trials": 4,
+ "mouse_in": [
+  "krebs"
+ ],
+ "shuffle": [
+  "space",
+  5
+ ]
+}
