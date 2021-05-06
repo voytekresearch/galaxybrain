@@ -1,42 +1,15 @@
 import numpy as np
 from scipy import io, signal
 import pandas as pd
-from scipy.integrate import odeint
+from . import ramsey
 import os
+import json
 
-
-def _lorenz(X, t, sigma, beta, rho):
-    """The Lorenz equations."""
-    u, v, w = X
-    up = -sigma*(u - v)
-    vp = rho*u - v - u*w
-    wp = -beta*w + u*v
-    return up, vp, wp
-
-def sim_lorenz(T, fs, init, args=(10, 2.667, 28)):
-    """Simulate a Lorenz attractor
-
-    Parameters
-    ----------
-    T : float
-        Signal length.
-    fs : float
-        Sampling rate.
-    init : tuple
-        Initial values.
-    args : tuple
-        Parameter values for sigma, beta, rho. Defaults to chaos values.
-
-    Returns
-    -------
-    type
-        Description of returned object.
-
-    """
-    t = np.arange(0,T,1/fs)
-    f = odeint(_lorenz, init, t, args)
-    x, y, z = f.T
-    return x,y,z
+import matplotlib.pyplot as plt
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+matplotlib.rc('figure', max_open_warning = 0)
 
 def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smooth_param=[0.2, 0.025]):
     """ Load neuropixel data from Stringer et al., 2019
@@ -138,7 +111,9 @@ def export_data(data,filename):
     print('Saved data to ../data')
 
 def _load_data(files = None, show_dir = False):
-    """ Load data from your data folder
+    """ 
+    EXPERIMENTAL
+    Load data from your data folder
     If show_dir is True, displays a list of files in your directory.  Omits the extension.
     If show_dir is False, assumes input is a string of format 'file1, file2 ...'
     Only really works for .csv for now
@@ -195,3 +170,68 @@ def load_npz(file):
         spn_p = data['spearman_p']
     decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p])
     return np.array(decomp_arr)
+
+mice_regions = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
+                'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
+                'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
+
+def load_and_plot(dir_, mice = mice_regions.keys(), plot=None,analysis_args=None):
+    '''
+    return of data dictionary currently not implemented
+    dir_ : dir of data
+    only plots if directory of figures given
+    '''
+    data_dict = dict()
+    
+    if analysis_args == None:
+        with open(f'{dir_}/analysis_args.json','r') as f:
+            analysis_args = json.load(f)
+    
+    if 'shuffle' in analysis_args:
+        n_loop = analysis_args['shuffle'][1]
+    else:
+        n_loop = analysis_args['num_trials']
+        
+    for mouse in mice:
+        data_dict[mouse] = []
+        for region, count in mice_regions[mouse].items():
+            decomp_arr = []
+            subset_sizes = np.linspace(30,count,16, dtype=int)
+            for i in range(n_loop):
+                with np.load(f'{dir_}/{mouse}/{region}/ramsey_' + str(i+1) + '.npz', allow_pickle=True) as data:
+                    eigs = data['eigs']
+                    pows = data['pows']
+                    space_er = data['space_er']
+                    time_er = data['time_er']
+                    pca_m = data['pca_m']
+                    ft_m = data['ft_m']
+                    psn_r = data['pearson_r']
+                    spn_r = data['spearman_rho']
+                    psn_p = data['pearson_p']
+                    spn_p = data['spearman_p']
+
+                decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p])
+
+            decomp_arr = np.array(decomp_arr)
+            data = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}}
+            data_dict[mouse].append((region, count, data)) #appending a big tuple that includes the data
+            
+            if plot:
+                ramsey.plot_all_measures(subset_sizes, space_er=space_er, time_er=time_er, 
+                             pc_range=[0,None], 
+                             eigs=eigs, 
+                             pows=pows,
+                             space_slopes=decomp_arr[:,0].mean(0), 
+                             time_slopes=decomp_arr[:,1].mean(0), 
+                             pearson_corr=decomp_arr[:,2], 
+                             spearman_corr=decomp_arr[:,3], 
+                             pearson_p=decomp_arr[:,4], 
+                             spearman_p=decomp_arr[:,5],
+                             **analysis_args['ramsey_params'])
+
+                plt.savefig(f'{plot}/{mouse}_{region}_measures')
+
+                plt.close('all')
+                plt.pause(0.01)
+            
+    return data_dict
