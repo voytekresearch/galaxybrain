@@ -44,9 +44,11 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
     n_iters = ramsey_params['n_iters']
     n_pc = ramsey_params['n_pc']
     f_range = ramsey_params['f_range']
+    
     #analysis + saving data 
     for mouse_key in mouse_in:
         mouse = mice_regions[mouse_key][0] #this is the data
+        ### TODO : maybe move this outside and append mouse names to labels ###
         parallel_args = [] #just need to keep track of indices
         parallel_labels = [] # for going through results and saving data later
         for region in mice_regions[mouse_key][1]:
@@ -84,24 +86,40 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                                                                                         ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
                                                                                         pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
                                                                                         pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
-        
             else:
-                for i in range(num_trials):
-                    eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p = ramsey.ramsey(mouse_raster, subsetsizes, **ramsey_params)
-                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{i+1}', eigs=eigs, pows=pows, pca_m=pca_m, space_er=s_er, ft_m=ft_m, time_er=t_er, pearson_r=psn_r, spearman_rho=spn_r, pearson_p=psn_p, spearman_p=spn_p)
+                if parallel:
+                    [parallel_args.append((mouse_raster,subsetsizes)) for n in range(num_trials)]
+                    [parallel_labels.append((region_name, n)) for n in range(num_trials)]
+                else:
+                    for i in range(num_trials):
+                        eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p = ramsey.ramsey(mouse_raster, subsetsizes, **ramsey_params)
+                        np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{i+1}', eigs=eigs, pows=pows, 
+                                                                                        pca_m=pca_m, space_er=s_er, 
+                                                                                        ft_m=ft_m, time_er=t_er, 
+                                                                                        pearson_r=psn_r, spearman_rho=spn_r, pearson_p=psn_p, spearman_p=spn_p)
         
         if parallel:
             results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
             pool.close()
-            for i in np.arange(0,len(results), num_trials):
-                region_name, s = parallel_labels[i][0], parallel_labels[i][1]
-                curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
-                np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
-                                                                                pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
-                                                                                pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
-                                                                                ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
-                                                                                pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
-                                                                                pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
+            if shuffle:
+                for i in np.arange(0,len(results), num_trials):
+                    region_name, s = parallel_labels[i][0], parallel_labels[i][1]
+                    curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
+                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
+                                                                                    pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
+                                                                                    pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
+                                                                                    ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
+                                                                                    pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
+                                                                                    pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
+            else:
+                for i in range(len(results)):
+                    region_name, tn = parallel_labels[i][0], parallel_labels[i][1]
+                    curr_output = np.array(results[i])
+                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{tn+1}', eigs=curr_output[:,0], pows=curr_output[:,1], 
+                                                                                        pca_m=curr_output[:,2], space_er=curr_output[:,3], 
+                                                                                        ft_m=curr_output[:,4], time_er=curr_output[:,5], 
+                                                                                        pearson_r=curr_output[:,6], spearman_rho=curr_output[:,7], pearson_p=curr_output[:,8], spearman_p=curr_output[:,9])
+
             
 ### SCRIPT ###
 if __name__ == '__main__':
