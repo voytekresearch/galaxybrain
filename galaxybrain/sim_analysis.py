@@ -9,6 +9,7 @@ sys.path.append(file_dir)
 from data_utils import load_mouse_data, return_pops
 import ramsey
 from ising import metro_ising
+from analysis_pipe import shuffle_data
 
 import multiprocessing as mp
 
@@ -21,15 +22,15 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 cores = mp.cpu_count()
 pool = mp.Pool(mp.cpu_count())
 
-def shuffle_data(data, axis): 
-    """Helper function to shuffle data"""
-    if axis == 'time':
-        t_ind = np.arange(data.shape[0]) 
-        np.random.shuffle(t_ind)
-        raster_curr = data.iloc[t_ind]
-    elif axis == 'space':
-        raster_curr = data.apply(np.random.permutation, axis=1, result_type='broadcast') #need broadcast to maintain shape
-    return raster_curr
+def n_from_x(x,n,stp):
+    """like np.arange except starting from the middle
+    x: start, n: num in either direction, stp: step size"""
+    r = [x]
+    for i in range(n):
+        nxt_p, nxt_n = x + (i+1) * stp, x - (i+1) * stp
+        r.append(nxt_p)
+        r.insert(0,nxt_n)
+    return r
 
 def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, burn_in = 20, shuffle = False, parallel=True):
     """
@@ -109,8 +110,8 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
 ### SCRIPT ###
 if __name__ == '__main__':
 
-    analysis_args={'output_dir' : '../data/experiments/sim1',
-                    'temps' : [2.26918531421],
+    analysis_args={'output_dir' : '../../../../projects/ps-voyteklab/brirry/data/experiments/expTESTSIM',
+                    'temps' : n_from_x(2.26918531421, 3, 0.1),
                     'ising_time': 1000,
                     'N' : 650,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
