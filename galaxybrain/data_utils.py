@@ -1,9 +1,13 @@
 import numpy as np
 from scipy import io, signal
 import pandas as pd
-from . import ramsey
-import os
+import sys, os
 import json
+
+sys.path.append('../')
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
+import ramsey
 
 import matplotlib.pyplot as plt
 import warnings

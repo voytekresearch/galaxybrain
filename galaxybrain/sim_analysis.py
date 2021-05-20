@@ -1,12 +1,12 @@
 from re import T
 import numpy as np
+import pandas as pd
 import sys, os
 import json
 sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
-from data_utils import load_mouse_data, return_pops
 import ramsey
 from ising import metro_ising
 from analysis_pipe import shuffle_data
@@ -102,10 +102,10 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
             for i in range(len(results)):
                 temp, tn = parallel_labels[i][0], parallel_labels[i][1]
                 curr_output = np.array(results[i])
-                np.savez(f'{output_dir}/{temp:.2f}/ramsey_{tn+1}', eigs=curr_output[:,0], pows=curr_output[:,1], 
-                                                                                    pca_m=curr_output[:,2], space_er=curr_output[:,3], 
-                                                                                    ft_m=curr_output[:,4], time_er=curr_output[:,5], 
-                                                                                    pearson_r=curr_output[:,6], spearman_rho=curr_output[:,7], pearson_p=curr_output[:,8], spearman_p=curr_output[:,9])
+                np.savez(f'{output_dir}/{temp:.2f}/ramsey_{tn+1}', eigs=curr_output[0], pows=curr_output[1], 
+                                                                                    pca_m=curr_output[2], space_er=curr_output[3], 
+                                                                                    ft_m=curr_output[4], time_er=curr_output[5], 
+                                                                                    pearson_r=curr_output[6], spearman_rho=curr_output[7], pearson_p=curr_output[8], spearman_p=curr_output[9])
 
 ### SCRIPT ###
 if __name__ == '__main__':
