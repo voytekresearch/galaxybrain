@@ -49,6 +49,7 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
     parallel_args = [] #just need to keep track of indices
     parallel_labels = [] # for going through results and saving data later
     for t in temps:
+        os.makedirs(f'{output_dir}/{t:.2f}')
         sim_mouse = metro_ising(N=N,T=t, plot=False, runtime=ising_time)
         sim_slice = pd.DataFrame(sim_mouse[200:][:,325]) #this is the data analyzed
         subsetsizes = np.linspace(30,N-10,16, dtype=int) # using N-10 to accomodate PCA error
@@ -118,8 +119,6 @@ if __name__ == '__main__':
                     'num_trials' : 5}
     
     run_analysis(**analysis_args)
-
-    analysis_args['mice_regions'] = 'mice_regions_var'
 
     with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
