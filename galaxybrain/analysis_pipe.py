@@ -19,7 +19,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 #Parallel stuff
 cores = mp.cpu_count()
-pool = mp.Pool(mp.cpu_count())
+pool = mp.Pool(8)
 
 def shuffle_data(data, axis): 
     """Helper function to shuffle data"""
@@ -75,8 +75,8 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                         
                     else:
                         for n in range(num_trials):
-                            eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p = ramsey.ramsey(curr_raster, subsetsizes, **ramsey_params)
-                            curr_output.append([eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p])
+                            eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b, pc_range_history = ramsey.ramsey(curr_raster, subsetsizes, **ramsey_params)
+                            curr_output.append([eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b])
                         
                         # AVG ACROSS TRIALS HERE
                         curr_output = np.array(curr_output)
@@ -97,7 +97,8 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                                                                                         pca_m=pca_m, space_er=s_er, 
                                                                                         ft_m=ft_m, time_er=t_er, 
                                                                                         pearson_r=psn_r, spearman_rho=spn_r, pearson_p=psn_p, spearman_p=spn_p)
-        
+            
+            
         if parallel:
             results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
             pool.close()
@@ -107,10 +108,12 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                     curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
                     np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
                                                                                     pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
-                                                                                    pca_m=curr_output[:,2].mean(0), space_er=curr_output[:,3].mean(0), 
-                                                                                    ft_m=curr_output[:,4].mean(0), time_er=curr_output[:,5].mean(0), 
+                                                                                    pca_m=curr_output[:,2].mean(0), pca_b=curr_output[:,10].mean(0), space_er=curr_output[:,3].mean(0), 
+                                                                                    ft_m=curr_output[:,4].mean(0), ft_b=curr_output[:,11].mean(0), time_er=curr_output[:,5].mean(0), 
                                                                                     pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
-                                                                                    pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0))
+                                                                                  pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0),
+                                                                                  curr_pc_range=curr_output[:,12][0]) # saving the first because they are all identical
+                
             else:
                 for i in range(len(results)):
                     region_name, tn = parallel_labels[i][0], parallel_labels[i][1]
@@ -148,7 +151,7 @@ if __name__ == '__main__':
                 'robbins': [robbins, [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)]],
                 'waksman': [waksman, [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)]] }
 
-    analysis_args={'output_dir' : '../data/experiments/expTEST',
+    analysis_args={'output_dir' : '../../../../projects/ps-voyteklab/brirry/data/experiments/expTESTTIME',
                     'mice_regions' : mice_regions,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
                     'num_trials' : 4,

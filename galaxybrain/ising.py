@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import clear_output
 
-def metro_ising(T, runtime, plot=True, N=None, grid=None):
+def metro_ising(T, runtime, plot='static', N=None, grid=None):
     """
     Metropolis Monte-Carlo Markov Chain algorithm
     grid: if you choose to initialize with previous image
@@ -35,12 +35,18 @@ def metro_ising(T, runtime, plot=True, N=None, grid=None):
         #raster.append(grid.flatten())
         frames.append(grid)
         
-        if plot:
+        if plot == 'animate':
             plt.figure(figsize=(6,6)) 
             plt.imshow(grid,cmap='gray')
             plt.axis('off')
             clear_output(wait=True)
             plt.show()
+        
+    if plot == 'static':
+        plt.figure(figsize=(6,6)) 
+        plt.imshow(grid,cmap='gray')
+        plt.axis('off')
+        plt.show()
         
     #turning current state into binary to resemble spiking neural network
     frames = np.array(frames)
