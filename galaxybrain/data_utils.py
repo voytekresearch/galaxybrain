@@ -211,15 +211,23 @@ def load_and_plot(dir_, type_='mouse', mice = mice_regions.keys(), plot=None,ana
                         time_er = data['time_er']
                         pca_m = data['pca_m']
                         ft_m = data['ft_m']
+                        pca_b = data['pca_b']
+                        ft_b = data['ft_b']
                         psn_r = data['pearson_r']
                         spn_r = data['spearman_rho']
                         psn_p = data['pearson_p']
                         spn_p = data['spearman_p']
+                        curr_pc_range = data['curr_pc_range']
 
-                    decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p])
+                    decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b,])
 
                 decomp_arr = np.array(decomp_arr)
-                data = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}}
+                data = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 
+                        'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 
+                        'eigs':eigs, 'pows':pows, 'pca_b':pca_b, 'ft_b':ft_b, 'espec_exp': decomp_arr[:,0].mean(0), 
+                        'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 
+                        'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 
+                        'spearman_p':decomp_arr[:,5]}}
                 data_dict[mouse].append((region, count, data)) #appending a big tuple that includes the data
                 
                 if plot:

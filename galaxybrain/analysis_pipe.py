@@ -5,8 +5,6 @@ sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
-from sklearn.decomposition import PCA
-
 from data_utils import load_mouse_data, return_pops
 import ramsey
 

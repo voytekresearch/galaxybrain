@@ -20,7 +20,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 #Parallel stuff
 cores = mp.cpu_count()
-pool = mp.Pool(mp.cpu_count())
+pool = mp.Pool(8)
 
 def n_from_x(x,n,stp):
     """like np.arange except starting from the middle
