@@ -7,7 +7,6 @@ file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
 import ramsey
-from analysis_pipe import shuffle_data
 
 import multiprocessing as mp
 
@@ -38,7 +37,7 @@ def run_analysis(output_dir, num_trials, ramsey_params, time, burn_in = 20, shuf
     parallel_labels = [] # for going through results and saving data later
 
     
-    sim_mouse = y = np.random.normal(size=time)
+    sim_mouse = np.array([np.random.normal(size=time) for i in range(1462)]).T # Time x Units
     sim_slice = pd.DataFrame(sim_mouse[burn_in:-burn_in]) #this is the data analyzed
     subsetsizes = np.linspace(30,1462,16, dtype=int) # using N-10 to accomodate PCA error
 
