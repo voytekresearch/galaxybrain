@@ -74,12 +74,12 @@ def run_analysis(output_dir, num_trials, ramsey_params, time, burn_in = 20, shuf
         for i in range(len(results)):
             tn = parallel_labels[i]
             curr_output = np.array(results[i])
-            np.savez(f'{output_dir}/ramsey_{tn+1}', eigs=curr_output[:,0], pows=curr_output[:,1], 
-                                                    pca_m=curr_output[:,2], pca_b=curr_output[:,10], space_er=curr_output[:,3], 
-                                                    ft_m=curr_output[:,4],ft_b=curr_output[:,11], time_er=curr_output[:,5], 
-                                                    pearson_r=curr_output[:,6], spearman_rho=curr_output[:,7], 
-                                                    pearson_p=curr_output[:,8], spearman_p=curr_output[:,9],
-                                                    curr_pc_range=curr_output[:,12])
+            np.savez(f'{output_dir}/ramsey_{tn+1}', eigs=curr_output[0], pows=curr_output[1], 
+                                                    pca_m=curr_output[2], pca_b=curr_output[10], space_er=curr_output[3], 
+                                                    ft_m=curr_output[4],ft_b=curr_output[11], time_er=curr_output[5], 
+                                                    pearson_r=curr_output[6], spearman_rho=curr_output[7], 
+                                                    pearson_p=curr_output[8], spearman_p=curr_output[9],
+                                                    curr_pc_range=curr_output[12])
 ### SCRIPT ###
 if __name__ == '__main__':
 
