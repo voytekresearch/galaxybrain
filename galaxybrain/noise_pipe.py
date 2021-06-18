@@ -41,20 +41,8 @@ def run_analysis(output_dir, num_trials, ramsey_params, time, burn_in = 20, shuf
     sim_slice = pd.DataFrame(sim_mouse[burn_in:-burn_in]) #this is the data analyzed
     subsetsizes = np.linspace(30,1462,16, dtype=int) # using N-10 to accomodate PCA error
 
-    if shuffle:
-        for s in range(shuffle[1]):
-            curr_raster = shuffle_data(sim_slice, shuffle[0]) 
-            #curr_output = {'eigs':[],'pows':[],'pca_m':[],'s_er':[],'ft_m':[],'t_er':[],'psn_r':[], 'spn_r':[], 'psn_p':[], 'spn_p':[]}
-
-            if parallel:
-                [parallel_args.append((curr_raster,subsetsizes)) for n in range(num_trials)]
-                [parallel_labels.append(s) for n in range(num_trials)]
-
-    else:
-        [parallel_args.append((sim_slice,subsetsizes)) for n in range(num_trials)]
-        [parallel_labels.append(n) for n in range(num_trials)]
-        
-        
+    [parallel_args.append((sim_slice,subsetsizes)) for n in range(num_trials)]
+    [parallel_labels.append(n) for n in range(num_trials)]    
 
     results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
     pool.close()

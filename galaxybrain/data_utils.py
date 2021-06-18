@@ -227,7 +227,7 @@ def load_and_plot(dir_, type_='mouse', mice = mice_regions.keys(), plot=None,ana
                         'eigs':eigs, 'pows':pows, 'pca_b':pca_b, 'ft_b':ft_b, 'espec_exp': decomp_arr[:,0].mean(0), 
                         'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 
                         'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 
-                        'spearman_p':decomp_arr[:,5]}}
+                        'spearman_p':decomp_arr[:,5], 'curr_pc_range':curr_pc_range}}
                 data_dict[mouse].append((region, count, data)) #appending a big tuple that includes the data
                 
                 if plot:
@@ -290,4 +290,44 @@ def load_and_plot(dir_, type_='mouse', mice = mice_regions.keys(), plot=None,ana
                 plt.close('all')
                 plt.pause(0.01)
             
+    elif type_ == 'noise':
+        # data_dict = [] #don't need dict because no regions. Yes it's poorly named
+        decomp_arr = []
+        subset_sizes = np.linspace(30,1462,16, dtype=int)
+        for i in range(n_loop):
+            with np.load(f'{dir_}/ramsey_{i+1}.npz', allow_pickle=True) as data:
+                eigs = data['eigs']
+                pows = data['pows']
+                space_er = data['space_er']
+                time_er = data['time_er']
+                pca_m = data['pca_m']
+                ft_m = data['ft_m']
+                psn_r = data['pearson_r']
+                spn_r = data['spearman_rho']
+                psn_p = data['pearson_p']
+                spn_p = data['spearman_p']
+            decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p])
+
+        decomp_arr = np.array(decomp_arr)
+        data_dict = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}}
+        # data_dict.append(data)
+        
+        if plot:
+            ramsey.plot_all_measures(subset_sizes, space_er=space_er, time_er=time_er, 
+                        pc_range=[0,None], 
+                        eigs=eigs, 
+                        pows=pows,
+                        space_slopes=decomp_arr[:,0].mean(0), 
+                        time_slopes=decomp_arr[:,1].mean(0), 
+                        pearson_corr=decomp_arr[:,2], 
+                        spearman_corr=decomp_arr[:,3], 
+                        pearson_p=decomp_arr[:,4], 
+                        spearman_p=decomp_arr[:,5],
+                        **analysis_args['ramsey_params'])
+
+            plt.savefig(f'{plot}/_measures.png')
+
+            plt.close('all')
+            plt.pause(0.01)
+
     return data_dict
