@@ -53,7 +53,7 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
         sim_mouse = metro_ising(N=N,T=t, plot=False, runtime=ising_time)
         sim_slice = pd.DataFrame(sim_mouse[200:][:,325]) #this is the data analyzed
         subsetsizes = np.linspace(30,N-10,16, dtype=int) # using N-10 to accomodate PCA error
-
+        np.sum(sim_slice.T).to_csv(f'{output_dir}/{t:.2f}/time_series.csv',index=False, header=False) #save summed signals
         if shuffle:
             for s in range(shuffle[1]):
                 curr_raster = shuffle_data(sim_slice, shuffle[0]) 

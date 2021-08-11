@@ -73,10 +73,10 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                         
                     else:
                         for n in range(num_trials):
-                            eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b, pc_range_history = ramsey.ramsey(curr_raster, subsetsizes, **ramsey_params)
-                            curr_output.append([eigs, pows, pca_m, s_er, ft_m, t_er, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b])
+                            eigs, pows, pca_m, pca_er, pca_b, ft_m, ft_er, ft_b, psn_r, spn_r, psn_p, spn_p  = ramsey.ramsey(curr_raster, subsetsizes, **ramsey_params)
+                            curr_output.append([eigs, pows, pca_m, pca_er, ft_m, ft_er, psn_r, spn_r, psn_p, spn_p, pca_b, ft_b])
                         
-                        # AVG ACROSS TRIALS HERE
+                        # OUTDATED (parallel is up to date) AVG ACROSS TRIALS HERE
                         curr_output = np.array(curr_output)
                         np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
                                                                                         pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
@@ -106,22 +106,27 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                     curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
                     np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{s+1}',eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
                                                                                     pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
-                                                                                    pca_m=curr_output[:,2].mean(0), pca_b=curr_output[:,10].mean(0), space_er=curr_output[:,3].mean(0), 
-                                                                                    ft_m=curr_output[:,4].mean(0), ft_b=curr_output[:,11].mean(0), time_er=curr_output[:,5].mean(0), 
-                                                                                    pearson_r=curr_output[:,6].mean(0), spearman_rho=curr_output[:,7].mean(0), 
-                                                                                  pearson_p=curr_output[:,8].mean(0), spearman_p=curr_output[:,9].mean(0),
-                                                                                  curr_pc_range=curr_output[:,12][0]) # saving the first because they are all identical
+                                                                                    pca_m=curr_output[:,2].mean(0), pca_er=curr_output[:,3].mean(0), pca_b=curr_output[:,4].mean(0), 
+                                                                                    ft_m1=curr_output[:,5].mean(0), ft_er1=curr_output[:,6].mean(0), ft_b1=curr_output[:,7].mean(0), 
+                                                                                    ft_m2=curr_output[:,8].mean(0), ft_er2=curr_output[:,9].mean(0), ft_b2=curr_output[:,10].mean(0), 
+                                                                                    pearson_r1=curr_output[:,11].mean(0), spearman_rho1=curr_output[:,13].mean(0), 
+                                                                                    pearson_p1=curr_output[:,12].mean(0), spearman_p1=curr_output[:,14].mean(0),
+                                                                                    pearson_r2=curr_output[:,15].mean(0), spearman_rho2=curr_output[:,17].mean(0), 
+                                                                                    pearson_p2=curr_output[:,16].mean(0), spearman_p2=curr_output[:,18].mean(0))
+                                                                                     #curr_pc_range=curr_output[:,12][0] # saving the first because they are all identical
                 
             else:
                 for i in range(len(results)):
                     region_name, tn = parallel_labels[i][0], parallel_labels[i][1]
                     curr_output = np.array(results[i])
                     np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{tn+1}', eigs=curr_output[0], pows=curr_output[1], 
-                                                                                        pca_m=curr_output[2], pca_b=curr_output[10], space_er=curr_output[3], 
-                                                                                        ft_m=curr_output[4],ft_b=curr_output[11], time_er=curr_output[5], 
-                                                                                        pearson_r=curr_output[6], spearman_rho=curr_output[7], 
-                                                                                        pearson_p=curr_output[8], spearman_p=curr_output[9],
-                                                                                        curr_pc_range=curr_output[12])
+                                                                                        pca_m=curr_output[2], pca_er=curr_output[3], pca_b=curr_output[4], 
+                                                                                        ft_m1=curr_output[5], ft_er1=curr_output[6],ft_b1=curr_output[7], 
+                                                                                        ft_m2=curr_output[8], ft_er2=curr_output[9],ft_b2=curr_output[10], 
+                                                                                        pearson_r1=curr_output[11], spearman_rho1=curr_output[13], 
+                                                                                        pearson_p1=curr_output[12], spearman_p1=curr_output[14],
+                                                                                        pearson_r2=curr_output[15], spearman_rho2=curr_output[17], 
+                                                                                        pearson_p2=curr_output[16], spearman_p2=curr_output[18])  #curr_pc_range=curr_output[12]
 
             
 ### SCRIPT ###
