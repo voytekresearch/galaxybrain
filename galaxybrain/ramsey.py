@@ -146,7 +146,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
             curr_f_range = None
 
         # pc_range_history.append(curr_pc_range)
-        spectra_i, results_i = random_subset_decomp(data, n_i, n_iters, n_pc_curr, pc_range = curr_pc_range, f_range = curr_f_range) #remember to add parameters later, check function doc for output
+        spectra_i, results_i = random_subset_decomp(data, n_i, n_pc_curr, curr_pc_range, curr_f_range, n_iters) #remember to add parameters later, check function doc for output
 
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
