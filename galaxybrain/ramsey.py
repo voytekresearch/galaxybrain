@@ -48,7 +48,7 @@ def ft_on_data(subset, **ft_kwargs):
         subset = np.array(subset)
     summed_neurons = subset.sum(axis= 1) # summing data for ft decomp.
     freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs)   #making these parameters now
-    freqs, powers_chans = compute_spectrum(subset, **ft_kwargs)   #TODO make sure transpose
+    freqs, powers_chans = compute_spectrum(subset.T, **ft_kwargs)   #TODO make sure transpose
 
     return freqs, powers_summed, powers_chans
 
@@ -64,7 +64,7 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
 
     evals_mat = np.zeros((n_iter, n_pc)) # n_iter * |evals|
     sum_powers_mat = np.zeros((n_iter, len(freqs)))
-    chan_powers_mat = np.zeros((n_iter, len(freqs)))
+    chan_powers_mat = np.zeros((n_iter,subset_size, len(freqs)))
 
     for i in np.arange(n_iter):
         raster_curr = data
@@ -107,10 +107,8 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
     returns: eigs, pows (2D)
             fit results and stats"""
     n = len(subset_sizes)
-
-    #these could also be np.zeros((n_iters, n)) (but check dims)
     eigs = []
-    powers = []
+    powers_sum = []
     fit_results = defaultdict(lambda: np.zeros((n_iters, n)))
     stats = defaultdict(lambda: np.zeros(n))
 
@@ -150,17 +148,18 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
 
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
-        powers.append(spectra_i['psd'].mean(0))
+        powers_sum.append(spectra_i['psd'].mean(0))
 
-        for measure in results_i.keys():
-            fit_results[measure][:,i] =  results_i[measure]
+        for measure, dat in results_i.items():
+            print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n')
+            fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed
             stats[f'pearson_r{it}'][i], stats[f'pearson_p{it}'][i] = stats.pearsonr(results_i['pca_m'], results_i[f'ft_m{it}'])
             stats[f'spearman_rho{it}'][i], stats[f'spearman_p{it}'][i] = stats.pearsonr(results_i['pca_m'], results_i[f'ft_m{it}'])
         
     # Have to unpack dict for parallel processing. key order is conserved in python 3.6+
-    return eigs, powers, [fit_results[k] for k in fit_results.keys()], [stats[k] for k in stats.keys()] #, pc_range_history
+    return eigs, powers_sum, [fit_results[k] for k in fit_results.keys()], [stats[k] for k in stats.keys()] #, pc_range_history
 
 def plot_all_measures(subsetsizes, space_er, time_er, n_pc,  eigs, pows, space_slopes, time_slopes, pearson_corr, spearman_corr, pearson_p, spearman_p):
 

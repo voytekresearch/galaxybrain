@@ -17,7 +17,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 #Parallel stuff
 cores = mp.cpu_count()
-pool = mp.Pool(8)
+pool = mp.Pool(7)
 
 def shuffle_data(data, axis): 
     """Helper function to shuffle data"""
