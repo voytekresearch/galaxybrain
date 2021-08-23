@@ -64,7 +64,7 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
 
     evals_mat = np.zeros((n_iter, n_pc)) # n_iter * |evals|
     sum_powers_mat = np.zeros((n_iter, len(freqs)))
-    chan_powers_mat = np.zeros((n_iter,subset_size, len(freqs)))
+    chan_powers_mat = np.zeros((n_iter, len(freqs),subset_size))
 
     for i in np.arange(n_iter):
         raster_curr = data
@@ -80,7 +80,7 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
         freqs, powers_sum, powers_chans = ft_on_data(subset, **ft_kwargs)
 
         sum_powers_mat[i] = powers_sum
-        chan_powers_mat[i] = powers_chans
+        chan_powers_mat[i] = powers_chans.T
 
     e_axis = np.arange(1,n_pc+1)
     pca_m_array, pca_er_array, pc_offsets = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
@@ -151,7 +151,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         powers_sum.append(spectra_i['psd'].mean(0))
 
         for measure, dat in results_i.items():
-            print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n')
+            print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n', flush=True)
             fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed
@@ -159,7 +159,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
             stats[f'spearman_rho{it}'][i], stats[f'spearman_p{it}'][i] = stats.pearsonr(results_i['pca_m'], results_i[f'ft_m{it}'])
         
     # Have to unpack dict for parallel processing. key order is conserved in python 3.6+
-    return eigs, powers_sum, [fit_results[k] for k in fit_results.keys()], [stats[k] for k in stats.keys()] #, pc_range_history
+    return eigs, powers_sum, [v for v in fit_results.values()], [v for v in stats.values()] #, pc_range_history
 
 def plot_all_measures(subsetsizes, space_er, time_er, n_pc,  eigs, pows, space_slopes, time_slopes, pearson_corr, spearman_corr, pearson_p, spearman_p):
 
