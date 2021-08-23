@@ -42,13 +42,13 @@ def pca_on_data(subset, n_pc):
 def ft_on_data(subset, **ft_kwargs):
     """
     Decomposition in time over both summed and non summed neurons
-    returns: freqs, powers_summed, powers_chans (2d array)
+    returns: freqs, powers_summed, powers_chans (2d array n_chans x n_freqs)
     """
     if type(subset) != np.ndarray:
         subset = np.array(subset)
     summed_neurons = subset.sum(axis= 1) # summing data for ft decomp.
-    freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs)   #making these parameters now
-    freqs, powers_chans = compute_spectrum(subset.T, **ft_kwargs)   #TODO make sure transpose
+    freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs)   #powers_sum is an array
+    freqs, powers_chans = compute_spectrum(subset.T, **ft_kwargs)   #returns a matrix! #TODO make sure transpose
 
     return freqs, powers_summed, powers_chans
 
@@ -64,7 +64,7 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
 
     evals_mat = np.zeros((n_iter, n_pc)) # n_iter * |evals|
     sum_powers_mat = np.zeros((n_iter, len(freqs)))
-    chan_powers_mat = np.zeros((n_iter, len(freqs),subset_size))
+    chan_powers_mat = np.zeros((n_iter, subset_size, len(freqs)))
 
     for i in np.arange(n_iter):
         raster_curr = data
@@ -80,12 +80,12 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
         freqs, powers_sum, powers_chans = ft_on_data(subset, **ft_kwargs)
 
         sum_powers_mat[i] = powers_sum
-        chan_powers_mat[i] = powers_chans.T
+        chan_powers_mat[i] = powers_chans
 
     e_axis = np.arange(1,n_pc+1)
     pca_m_array, pca_er_array, pc_offsets = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
     ft_m_array1, ft_er_array1, ft_offsets1 = fooofy(freqs, sum_powers_mat, f_range) #time decomposition exponents, and er
-    ft_m_array2, ft_er_array2, ft_offsets2 = np.mean([fooofy(freqs, p_mat, f_range) for p_mat in chan_powers_mat], axis=0)
+    ft_m_array2, ft_er_array2, ft_offsets2 = np.mean([fooofy(freqs, powers_chans[:,it], f_range) for it in range(n_iter)], axis=0) # list comp here iterates over each neuron
     
     spectra = {'evals':evals_mat,'psd':sum_powers_mat}
     fit_dict = {'pca_m':pca_m_array,
@@ -151,7 +151,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         powers_sum.append(spectra_i['psd'].mean(0))
 
         for measure, dat in results_i.items():
-            print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n', flush=True)
+            # print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n', flush=True)
             fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed

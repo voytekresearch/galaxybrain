@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 'robbins': [robbins, [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)]],
                 'waksman': [waksman, [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)]] }
 
-    analysis_args={'output_dir' : '../../../../projects/ps-voyteklab/brirry/data/experiments/expTESTTIME',
+    analysis_args={'output_dir' : '../../../../projects/ps-voyteklab/brirry/data/experiments/NOSUM',
                     'mice_regions' : mice_regions,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
                     'num_trials' : 4,

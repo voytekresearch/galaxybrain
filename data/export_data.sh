@@ -1,3 +1,4 @@
+#!/bin/bash
 # moves data in this directory to TSCC
 for i in {1..6}
 do 

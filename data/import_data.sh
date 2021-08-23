@@ -1,3 +1,4 @@
+#!/bin/bash
 # moves data from TSCC server to local
 
 read -p "Enter name of directory:  " folder
