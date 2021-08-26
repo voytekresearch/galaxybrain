@@ -119,7 +119,7 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
                 for i in range(len(results)):
                     region_name, tn = parallel_labels[i][0], parallel_labels[i][1]
                     curr_output = np.array(results[i])
-                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{tn+1}', eigs=curr_output[0], pows=curr_output[1], 
+                    np.savez(f'{output_dir}/{mouse_key}/{region_name}/ramsey_{tn+1}',   eigs=curr_output[0], pows=curr_output[1], 
                                                                                         pca_m=curr_output[2], pca_er=curr_output[3], pca_b=curr_output[4], 
                                                                                         ft_m1=curr_output[5], ft_er1=curr_output[6],ft_b1=curr_output[7], 
                                                                                         ft_m2=curr_output[8], ft_er2=curr_output[9],ft_b2=curr_output[10], 
