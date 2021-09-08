@@ -302,3 +302,47 @@ def load_and_plot(dir_, type_='mouse', plot=None,analysis_args=None):
             plt.pause(0.01)
 
     return data_dict
+
+
+def formatted_data():
+    """Uses load_mouse_data to return a dictionary of mouse data and region info"""
+    datafolder = '../data/spikes/'
+
+    all_mice = []
+    for i_m in range(3):
+        print('Mouse ' + (str(i_m+1)))
+        all_mice.append([])
+        df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
+        region_indices = {}
+        for region in df_info.region.unique():
+            region_indices.update({region:np.where(df_info['region'] == str(region))[0]})
+            
+        spk_list, region_labels = return_pops(df_spk, df_info)
+        print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
+        
+        su_start_ind = len(region_labels)+1
+        
+        all_mice[i_m].append(df_spk[df_spk.columns[su_start_ind:]])
+        all_mice[i_m].append(region_indices)
+        
+    krebs = all_mice[0]; robbins = all_mice[1]; waksman = all_mice[2]
+
+    raster_dict = {'krebs': [krebs, [('all', 1462), ('CP', 176), ('HPF', 265), ('LS', 122), ('MB', 127), ('TH', 227), ('V1', 334)]],
+                'robbins': [robbins, [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)]],
+                'waksman': [waksman, [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)]] }
+
+    return raster_dict
+
+
+def mouse_iter(raster_dict, mouse_key, burn_in):
+    """Yields mouse data in an oft used loop"""
+    mouse = raster_dict[mouse_key][0]
+    for region in raster_dict[mouse_key][1]:
+        region_name, region_count = region[0], region[1]
+        print(region_name)
+        if region_name == 'all':
+            mouse_raster = mouse[0].iloc[burn_in:-burn_in]
+        else:
+            mouse_raster = mouse[0][mouse[1][region_name]].iloc[burn_in:-burn_in]
+            
+        yield np.array(mouse_raster), region_name, region_count

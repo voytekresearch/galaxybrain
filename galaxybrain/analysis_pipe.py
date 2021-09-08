@@ -51,7 +51,7 @@ def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 
         parallel_labels = [] # for going through results and saving data later
         for region in mice_regions[mouse_key][1]:
             
-            region_name = region[0]; region_count = region[1]
+            region_name, region_count = region[0], region[1]
             print(region_name)
             os.makedirs(f'{output_dir}/{mouse_key}/{region_name}')
 

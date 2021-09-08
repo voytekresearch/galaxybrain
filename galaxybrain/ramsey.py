@@ -53,7 +53,7 @@ def ft_on_data(subset, **ft_kwargs):
     return freqs, powers_summed, powers_chans
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
-def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150):
+def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_iter=150):
     """shuffle: either 'space' or 'time' to destroy correlations differently
     returned data include 1 pca exponent and 2 PSD exponents
     """
@@ -67,7 +67,6 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
     chan_powers_mat = np.zeros((n_iter, subset_size, len(freqs)))
 
     for i in np.arange(n_iter):
-        raster_curr = data
 
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
         subset = np.array(raster_curr.iloc[:,loc_array]) #currently converted to array for testing jit
@@ -87,7 +86,7 @@ def random_subset_decomp(data, subset_size, n_pc, pc_range, f_range, n_iter=150)
     ft_m_array1, ft_er_array1, ft_offsets1 = fooofy(freqs, sum_powers_mat, f_range) #time decomposition exponents, and er
     ft_m_array2, ft_er_array2, ft_offsets2 = np.mean([fooofy(freqs, chan_powers_mat[:,it], f_range) for it in range(subset_size)], axis=0) # list comp here iterates over each neuron
     
-    spectra = {'evals':evals_mat,'psd':sum_powers_mat}
+    spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
     fit_dict = {'pca_m':pca_m_array,
                 'pca_er':pca_er_array,
                 'pca_b':pc_offsets,
@@ -109,6 +108,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
     n = len(subset_sizes)
     eigs = []
     powers_sum = []
+    powers_chan = [] #UNUSED
     fit_results = defaultdict(lambda: np.zeros((n_iters, n)))
     stats_ = defaultdict(lambda: np.zeros(n))
 
@@ -121,10 +121,10 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subset_sizes)
 
-        elif type(n_pc) == int and n_pc < n_i:
+        elif isinstance(n_pc, int) and n_pc < n_i:
             n_pc_curr = n_pc
 
-        elif type(n_pc) == float:
+        elif isinstance(n_pc, float):
             n_pc_curr = int(n_pc*n_i)
 
         #write conditions for pc_range,  use a function, or outside of this
@@ -132,12 +132,12 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         if pc_range == [0,None]:
             curr_pc_range = [0, int(min(.5*n_pc_curr, .25*max(subset_sizes*n_pc)))]
 
-        elif type(pc_range[1]) == float: #if second element of pc_range is float, it is a percentage of pc's
+        elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
 
         #f_range conditions
-        if type(f_range[1]) == float:
+        if isinstance(f_range[1], float):
             curr_f_range = [f_range[0],f_range[1]]
 
         elif f_range[1] == None:
