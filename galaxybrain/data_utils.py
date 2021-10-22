@@ -308,7 +308,14 @@ def formatted_data(mice_ix=range(3)):
     """
     Uses load_mouse_data to return a dictionary of mouse data and region info
     args:
-        mice: list of mouse specific indices (0,1,2)"""
+        mice: list of mouse specific indices (0,1,2)
+        
+    Returns:
+        Dict of form: {mouse_name : ( (spike_dataframe, region_indices_dict), 
+                                    {region1:count, region2:count...} )
+                        }
+        See mouse_iter() for use case
+        """
     
     datafolder = '../data/spikes/'
 
