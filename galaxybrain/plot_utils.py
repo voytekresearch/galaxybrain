@@ -21,18 +21,19 @@ def p_plot(p_data, kind, subsetsizes, n_trials):
     plt.title(f'{kind} p value as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel('$log_{10}p$') 
 
-def init_plt_style(n):
-    '''n: number of cylcer iters'''
+def rc_style(font_size=14, n_c=None):
+    """n_c: number of cylcer iters"""
     plt.rcParams['mathtext.default'] = 'regular'
 
     font = {'family' : 'Arial',
        'weight' : 'regular',
-       'size'   : 14}
+       'size'   : font_size}
     
     plt.rc('font', **font)
     plt.rcParams['axes.spines.top']=False
     plt.rcParams['axes.spines.right']=False
-    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n)))
+    if n_c:
+        plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
 
 def plot_all_measures(data):
     """
@@ -41,7 +42,7 @@ def plot_all_measures(data):
     n_pc = data['n_pc']
     n = len(subsetsizes)
     #stylistic details
-    init_plt_style(n)
+    rc_style(n_c=n)
     plt.figure(figsize=(23,15))
 
     #plot spectra
