@@ -1,6 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib as mpl
+from matplotlib.colors import LinearSegmentedColormap
+import cycler
 
+### Helper functions
+def noticks():
+    plt.xticks([]);    plt.yticks([])
+    
+def pltlabel(title, x, y):
+    plt.title(title)
+    plt.xlabel(x);    plt.ylabel(y)
+
+def colorcycler(color_range, num):
+    cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
+    mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
+
+def rc_style(font_size=14, n_c=None):
+    """n_c: number of cylcer iters"""
+    plt.rcParams['mathtext.default'] = 'regular'
+
+    font = {'family' : 'Arial',
+       'weight' : 'regular',
+       'size'   : font_size}
+    
+    plt.rc('font', **font)
+    plt.rcParams['axes.spines.top']=False
+    plt.rcParams['axes.spines.right']=False
+    if n_c:
+        plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
+
+### Analysis functions
 def corr_plot(corr_data, kind, subsetsizes, n_trials):
     label_map = {'Pearson':'r','Spearman':'ρ'}
     corr_data = np.array([corr_data[i] for i in range(n_trials)], dtype=float)
@@ -20,20 +50,6 @@ def p_plot(p_data, kind, subsetsizes, n_trials):
     # plt.yscale('log')
     plt.title(f'{kind} p value as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel('$log_{10}p$') 
-
-def rc_style(font_size=14, n_c=None):
-    """n_c: number of cylcer iters"""
-    plt.rcParams['mathtext.default'] = 'regular'
-
-    font = {'family' : 'Arial',
-       'weight' : 'regular',
-       'size'   : font_size}
-    
-    plt.rc('font', **font)
-    plt.rcParams['axes.spines.top']=False
-    plt.rcParams['axes.spines.right']=False
-    if n_c:
-        plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
 
 def plot_all_measures(data):
     """

@@ -14,9 +14,13 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 
 
-def fooofy(components, spectra, freq_range, group = True):
+def fooofy(components, spectra, x_range, group = True):
     """
-    A FOOOF Function, gets exponent parameters
+    fit FOOOF model on given spectrum and return params
+        components: frequencies or PC dimensions
+        spectra: PSDs or variance explained
+        x_range: range for x axis of spectrum to fit
+        group: whether to use FOOOFGroup or not
     """
     if group:
         fg = FOOOFGroup(max_n_peaks=0, aperiodic_mode='fixed', verbose = False) #initialize FOOOF object
@@ -24,17 +28,19 @@ def fooofy(components, spectra, freq_range, group = True):
         fg = FOOOF(max_n_peaks=0, aperiodic_mode='fixed', verbose = False) #initialize FOOOF object
     #print(spectra.shape, components.shape) #Use this line if things go weird
 
-    fg.fit(components, spectra, freq_range) # THIS IS WHERE YOU SAY WHICH FREQ RANGE TO FIT
+    fg.fit(components, spectra, x_range) # THIS IS WHERE YOU SAY WHICH FREQ RANGE TO FIT
     exponents = fg.get_params('aperiodic_params', 'exponent')
     errors = fg.get_params('error')
     offsets = fg.get_params('aperiodic_params', 'offset')
     return exponents, errors, offsets
 
-def pca_on_data(subset, n_pc):
+def pca(data, n_pc):
     """
     Decomposition in space
     """
-    pop_pca = PCA(n_pc).fit(subset)
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    pop_pca = PCA(n_pc).fit(data)
     evals = pop_pca.explained_variance_ratio_
 
     return evals
@@ -58,13 +64,15 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
     returned data include 1 pca exponent and 2 PSD exponents
     """
     #Make these parameters for main func later
-    ft_kwargs = {'fs':1, 'nperseg':120, 'noverlap':60}
+    fs = 1
+    nperseg = 120
+    noverlap = nperseg/2
 
-    freqs = np.fft.rfftfreq(ft_kwargs['nperseg'])
+    freqs = np.fft.rfftfreq(nperseg)
 
-    evals_mat = np.zeros((n_iter, n_pc)) # n_iter * |evals|
-    sum_powers_mat = np.zeros((n_iter, len(freqs)))
-    chan_powers_mat = np.zeros((n_iter, subset_size, len(freqs)))
+    evals_mat = np.empty((n_iter, n_pc)) # n_iter * |evals|
+    sum_powers_mat = np.empty((n_iter, len(freqs)))
+    chan_powers_mat = np.empty((n_iter, subset_size, len(freqs)))
 
     for i in np.arange(n_iter):
 
@@ -72,11 +80,11 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
         subset = np.array(raster_curr.iloc[:,loc_array]) #currently converted to array for testing jit
 
         # decomposition in space
-        evals = pca_on_data(subset, n_pc)
+        evals = pca(subset, n_pc)
         evals_mat[i] = evals
 
         # decomposition in time
-        freqs, powers_sum, powers_chans = ft_on_data(subset, **ft_kwargs)
+        freqs, powers_sum, powers_chans = ft_on_data(subset, fs=fs, nperseg=nperseg, noverlap=noverlap)
 
         sum_powers_mat[i] = powers_sum
         chan_powers_mat[i] = powers_chans
@@ -109,8 +117,8 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
     eigs = []
     powers_sum = []
     powers_chan = [] #UNUSED
-    fit_results = defaultdict(lambda: np.zeros((n_iters, n)))
-    stats_ = defaultdict(lambda: np.zeros(n))
+    fit_results = defaultdict(lambda: np.empty((n_iters, n)))
+    stats_ = defaultdict(lambda: np.empty(n))
 
     # pc_range_history = []
     for i, n_i in enumerate(subset_sizes):
