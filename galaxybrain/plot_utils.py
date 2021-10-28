@@ -51,8 +51,9 @@ def p_plot(p_data, kind, subsetsizes, n_trials):
     plt.title(f'{kind} p value as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel('$log_{10}p$') 
 
-def plot_all_measures(data):
+def plot_all_measures(data, meta):
     """
+    meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
     """
     subsetsizes = data['subsetsizes']
     n_pc = data['n_pc']
