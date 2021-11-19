@@ -8,9 +8,9 @@ import cycler
 def noticks():
     plt.xticks([]);    plt.yticks([])
     
-def pltlabel(title, x, y):
+def pltlabel(title, x, y, size=14):
     plt.title(title)
-    plt.xlabel(x);    plt.ylabel(y)
+    plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
 
 def colorcycler(color_range, num):
     cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))

@@ -126,7 +126,6 @@ def load_npz(file, kind, decomp_arr):
     sim/noise data don't have: b, summed data (#2 suffix)
         and decomp_arr appends: [pca_m, ft_m, psn_r, spn_r, psn_p, spn_p]
     """
-    decomp_arr = []
     if kind == 'mouse':
         with np.load(file, allow_pickle=True) as data:
             eigs = data['eigs']
@@ -154,6 +153,21 @@ def load_npz(file, kind, decomp_arr):
                         pearson_r2, spearman_rho2, pearson_p2, spearman_p2,
                             pca_b, ft_b1, ft_b2])
         return eigs, pows, pca_er, pca_b, ft_er1, ft_b1, ft_er2, ft_b2, decomp_arr
+    
+    elif kind == 'mouse_old': # "old" data format with different field names 
+        with np.load(file, allow_pickle=True) as data:
+            eigs = data['eigs']
+            pows = data['pows']
+            space_r2 = data['space_r2']
+            time_r2 = data['time_r2']
+            pca_m = data['pca_m']
+            ft_m = data['ft_m']
+            psn_r = data['pearson_r']
+            spn_r = data['spearman_rho']
+            psn_p = data['pearson_p']
+            spn_p = data['spearman_p']
+        decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p]) # in the past r2 went into here??
+        return eigs, pows, space_r2, time_r2, decomp_arr
 
     elif kind in ('sim', 'noise'):
         with np.load(file, allow_pickle=True) as data:
@@ -170,7 +184,7 @@ def load_npz(file, kind, decomp_arr):
         decomp_arr.append([pca_m, ft_m, psn_r, spn_r, psn_p, spn_p])
         return eigs, pows, space_er, time_er, decomp_arr
 
-def load_and_plot(dir_, type_='mouse', plot=None, analysis_args=None):
+def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
     '''
     loads, [optionally] plots analysis results
     return of data dictionary currently not implemented
@@ -188,26 +202,40 @@ def load_and_plot(dir_, type_='mouse', plot=None, analysis_args=None):
     else:
         n_loop = analysis_args['num_trials']
 
-    if type_ == 'mouse':    
+    if 'mouse' in kind: #"mouse" or "mouse_old"
         for mouse in analysis_args['mouse_in']:
             data_dict[mouse] = {}
             for region, count in MICE_REGIONS[mouse].items():
                 decomp_arr = []
                 subset_sizes = np.linspace(30,count,16, dtype=int)
                 for i in range(n_loop):
-                    eigs, pows, pca_er, pca_b, ft_er1, ft_b1, ft_er2, ft_b2, decomp_arr = load_npz(f'{dir_}/{mouse}/{region}/ramsey_{i+1}.npz', type_, decomp_arr)
+                    #TODO supposed to decomp_arr to decomp_arr
+                    if kind == 'mouse':
+                        eigs, pows, pca_er, pca_b, ft_er1, ft_b1, ft_er2, ft_b2, decomp_arr = load_npz(f'{dir_}/{mouse}/{region}/ramsey_{i+1}.npz', kind, decomp_arr)
+                    else:
+                        eigs, pows, space_r2, time_r2, decomp_arr = load_npz(f'{dir_}/{mouse}/{region}/ramsey_{i+1}.npz', kind, decomp_arr)
                 
                 decomp_arr = np.array(decomp_arr, dtype=object)
-                meta = {'count':count, **analysis_args['ramsey_params'], 'pc_range':[0,None]}
-                data = {'subsetsizes':subset_sizes, 
-                        'pca_er':pca_er, 'ft_er1':ft_er1, 'ft_er2':ft_er2,
-                        'eigs':eigs, 'pows':pows, 'pca_b':pca_b, 'ft_b1':ft_b1, 'ft_b2':ft_b2,
-                        'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp1': decomp_arr[:,1].mean(0), 'psd_exp2': decomp_arr[:,2].mean(0),
-                        'pearson_corr1':decomp_arr[:,3], 'spearman_corr1':decomp_arr[:,4], 
-                        'pearson_p1':decomp_arr[:,5], 'spearman_p1':decomp_arr[:,6], 
-                        'pearson_corr2':decomp_arr[:,7], 'spearman_corr2':decomp_arr[:,8], 
-                        'pearson_p2':decomp_arr[:,9], 'spearman_p2':decomp_arr[:,10], 
-                        }
+                meta = {'count':count, **analysis_args['ramsey_params'], 'pc_range':[0,None], 'subsetsizes':subset_sizes}
+                if kind == 'mouse':
+                    data = { 
+                            'pca_er':pca_er, 'ft_er1':ft_er1, 'ft_er2':ft_er2,
+                            'eigs':eigs, 'pows':pows, 'pca_b':pca_b, 'ft_b1':ft_b1, 'ft_b2':ft_b2,
+                            'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp1': decomp_arr[:,1].mean(0), 'psd_exp2': decomp_arr[:,2].mean(0),
+                            'pearson_corr1':decomp_arr[:,3], 'spearman_corr1':decomp_arr[:,4], 
+                            'pearson_p1':decomp_arr[:,5], 'spearman_p1':decomp_arr[:,6], 
+                            'pearson_corr2':decomp_arr[:,7], 'spearman_corr2':decomp_arr[:,8], 
+                            'pearson_p2':decomp_arr[:,9], 'spearman_p2':decomp_arr[:,10], 
+                            }
+                else:
+                    data = { 
+                            'space_r2':space_r2, 'time_r2':time_r2,
+                            'eigs':eigs, 'pows':pows,
+                            'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0),
+                            'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 
+                            'pearson_p':decomp_arr[:,4], 'spearman_p1':decomp_arr[:,5],
+                            }
+
                 data_dict[mouse][region] = {'meta': meta, 'data':data} #appending a big tuple that includes the data
                 
                 if plot: #saves plots in folder
@@ -215,19 +243,19 @@ def load_and_plot(dir_, type_='mouse', plot=None, analysis_args=None):
                     plt.savefig(f'{plot}/{mouse}_{region}_measures')
                     plt.close('all')
                     plt.pause(0.01)
-    
-    elif type_ == 'sim': #ising model
+
+    elif kind == 'sim': #ising model
         N = analysis_args['N']
         for t in analysis_args['temps']:
-            data_dict[f'{t:.2f}'] = []
             decomp_arr = []
             subset_sizes = np.linspace(30,N-10,16, dtype=int)
             for i in range(n_loop):
-                eigs, pows, space_er, time_er, decomp_arr = load_npz(f'{dir_}/{t:.2f}/ramsey_{i+1}.npz')
+                eigs, pows, space_er, time_er, decomp_arr = load_npz(f'{dir_}/{t:.2f}/ramsey_{i+1}.npz', kind, decomp_arr)
             
             decomp_arr = np.array(decomp_arr, dtype=object)
-            data = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}}
-            data_dict[f'{t:.2f}'].append(data)
+            meta = {'subsetsizes':subset_sizes, **analysis_args['ramsey_params']}
+            data = {'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}
+            data_dict[f'{t:.2f}'] = {'meta':meta, 'data':data}
             
             if plot:
                 ramsey.plot_all_measures(data) #warning: doesn't have summed equivalent
@@ -235,7 +263,7 @@ def load_and_plot(dir_, type_='mouse', plot=None, analysis_args=None):
                 plt.close('all')
                 plt.pause(0.01)
             
-    elif type_ == 'noise':
+    elif kind == 'noise':
         decomp_arr = []
         subset_sizes = np.linspace(30,1462,16, dtype=int)
         for i in range(n_loop):
