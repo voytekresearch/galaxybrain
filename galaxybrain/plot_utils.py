@@ -9,7 +9,7 @@ def noticks():
     plt.xticks([]);    plt.yticks([])
     
 def pltlabel(title, x, y, size=14):
-    plt.title(title)
+    plt.title(title, fontsize=size)
     plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
 
 def colorcycler(color_range, num):
