@@ -114,10 +114,55 @@ def _beg_end(spikes_all):
     spikes_concat = np.concatenate(spikes_all)
     return np.floor(spikes_concat.min()), np.ceil(spikes_concat.max())
 
-def export_data(data,filename):
-    #filename is a str, exports to csv
-    data.to_csv(r'../data/'+filename+'.csv',encoding='utf-8', index=True)
-    print('Saved data to ../data')
+def spike_dict(mice_ix=range(3)):
+    """
+    Uses load_mouse_data to return a dictionary of mouse data and region info
+    args:
+        mice_ix: list of mouse specific indices (0,1,2)
+        
+    Returns:
+        Dict of form: {mouse_name : ( (spike_dataframe, region_indices_dict), 
+                                    {region1:count, region2:count...} )
+                        }
+        See mouse_iter() for use case
+        """
+    
+    datafolder = '../data/spikes/'
+
+    region_sizes = ( [('all', 1462), ('CP', 176), ('HPF', 265), ('LS', 122), ('MB', 127), ('TH', 227), ('V1', 334)], #krebs
+                     [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)], #robbins
+                     [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)] ) #waksman
+    raster_dict = {}
+    for i_m, name in zip(mice_ix, ('krebs', 'robbins','waksman')):
+        print(f'Mouse {i_m+1}')
+        df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
+        region_indices = {}
+        for region in df_info.region.unique():
+            region_indices.update({region:np.where(df_info['region'] == str(region))[0]})
+            
+        spk_list, region_labels = return_pops(df_spk, df_info)
+        print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
+        su_start_ind = len(region_labels)+1
+        raster_dict[name] = ( (df_spk[df_spk.columns[su_start_ind:]], region_indices), region_sizes[i_m] )
+
+    return raster_dict
+
+def mouse_iter(raster_dict, mouse_key, burn_in):
+    """Yields mouse spikes in an oft used loop"""
+    mouse = raster_dict[mouse_key][0]
+    for region in raster_dict[mouse_key][1]:
+        region_name, region_count = region[0], region[1]
+        print(region_name)
+        if region_name == 'all':
+            mouse_raster = mouse[0].iloc[burn_in:-burn_in]
+        else:
+            mouse_raster = mouse[0][mouse[1][region_name]].iloc[burn_in:-burn_in]
+            
+        yield np.array(mouse_raster), region_name, region_count
+
+#####################################
+### Analysis result data handling ###
+#####################################
 
 def load_npz(file, kind, decomp_arr):
     """
@@ -279,49 +324,3 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
 
     return data_dict
 
-
-def spike_dict(mice_ix=range(3)):
-    """
-    Uses load_mouse_data to return a dictionary of mouse data and region info
-    args:
-        mice_ix: list of mouse specific indices (0,1,2)
-        
-    Returns:
-        Dict of form: {mouse_name : ( (spike_dataframe, region_indices_dict), 
-                                    {region1:count, region2:count...} )
-                        }
-        See mouse_iter() for use case
-        """
-    
-    datafolder = '../data/spikes/'
-
-    region_sizes = ( [('all', 1462), ('CP', 176), ('HPF', 265), ('LS', 122), ('MB', 127), ('TH', 227), ('V1', 334)], #krebs
-                     [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)], #robbins
-                     [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)] ) #waksman
-    raster_dict = {}
-    for i_m, name in zip(mice_ix, ('krebs', 'robbins','waksman')):
-        print(f'Mouse {i_m+1}')
-        df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
-        region_indices = {}
-        for region in df_info.region.unique():
-            region_indices.update({region:np.where(df_info['region'] == str(region))[0]})
-            
-        spk_list, region_labels = return_pops(df_spk, df_info)
-        print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
-        su_start_ind = len(region_labels)+1
-        raster_dict[name] = ( (df_spk[df_spk.columns[su_start_ind:]], region_indices), region_sizes[i_m] )
-
-    return raster_dict
-
-def mouse_iter(raster_dict, mouse_key, burn_in):
-    """Yields mouse data in an oft used loop"""
-    mouse = raster_dict[mouse_key][0]
-    for region in raster_dict[mouse_key][1]:
-        region_name, region_count = region[0], region[1]
-        print(region_name)
-        if region_name == 'all':
-            mouse_raster = mouse[0].iloc[burn_in:-burn_in]
-        else:
-            mouse_raster = mouse[0][mouse[1][region_name]].iloc[burn_in:-burn_in]
-            
-        yield np.array(mouse_raster), region_name, region_count
