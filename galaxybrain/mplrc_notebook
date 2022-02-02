@@ -1,0 +1,22 @@
+axes.spines.left     : True
+axes.spines.bottom   : True
+axes.spines.top      : False
+axes.spines.right    : False
+
+axes.linewidth       : 1.5
+xtick.major.width    : 1.5
+xtick.minor.width    : 1.5
+ytick.major.width    : 1.5
+ytick.minor.width    : 1.5
+
+lines.linewidth      : 2
+lines.markersize     : 3
+
+legend.frameon       : False
+
+figure.figsize	    : 4, 4
+
+font.family : Arial
+font.weight : regular
+font.size   : 14
+mathtext.default : regular

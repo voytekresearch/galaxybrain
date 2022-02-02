@@ -3,8 +3,9 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
-
+import os
 ### Helper functions
+
 def noticks():
     plt.xticks([]);    plt.yticks([])
     
@@ -16,17 +17,12 @@ def colorcycler(color_range, num):
     cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
     mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
 
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def rc_style(font_size=14, n_c=None):
     """n_c: number of cylcer iters"""
-    plt.rcParams['mathtext.default'] = 'regular'
-
-    font = {'family' : 'Arial',
-       'weight' : 'regular',
-       'size'   : font_size}
-    
-    plt.rc('font', **font)
-    plt.rcParams['axes.spines.top']=False
-    plt.rcParams['axes.spines.right']=False
+    plt.style.use(CURR_DIR+'/mplrc_notebook')
+    # plt.rcParams['font.font_size'] = font_size
     if n_c:
         plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
 
