@@ -9,7 +9,7 @@ neurodsp==2.1.0
 numpy==1.20.1
 pandas==1.2.2
 pathos==0.2.7
-Pillow==8.1.0
+Pillow==9.0.1
 pox==0.2.9
 ppft==1.6.6.3
 pyparsing==2.4.7
