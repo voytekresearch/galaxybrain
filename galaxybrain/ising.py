@@ -1,29 +1,36 @@
 import numpy as np
-from numpy.random import rand
 import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import clear_output
 
-def metro_ising(T, runtime, plot='static', N=None, grid=None):
+def metro_ising(T, runtime, plot=False, N=None, grid=None):
     """
     Metropolis Monte-Carlo Markov Chain algorithm
-    grid: if you choose to initialize with previous image
+        T: temperature
+        grid: if you choose to initialize with previous image
+        runtime: iterations
+        plot 
+    returns array of shape (runtime, N, N)
     """
     J = 1 #strength of interaction (Joules)
     k = 1 # Joules per kelvin
     raster = []
     frames = []
-    if grid is not None:
+
+    if T == 'critical':
+        T = 2.26918531421
+
+    if grid != None:
         N = grid.shape[0]
     else:
         grid = 2*np.random.randint(2, size = (N,N)) - 1 #random initial configuration with 1s and -1s
-        
+    
     for t in range(runtime):
         #sum of interactions at each spin site (vectorized!)
-        interactions = sum([np.roll(grid,shift =(0, 1), axis = 1),
-                            np.roll(grid,shift =(0, -1), axis = 1),
-                            np.roll(grid,shift =(1, 0), axis = 0), # have to change axis because unlike MATLAB's circshift, np.roll sees shifts (0,1) == (1,0)
-                            np.roll(grid,shift =(-1, 0), axis = 0)])
+        interactions = sum([np.roll(grid, shift=(0, 1), axis=1),
+                            np.roll(grid, shift=(0, -1), axis=1),
+                            np.roll(grid, shift=(1, 0), axis=0), # have to change axis because unlike MATLAB's circshift, np.roll sees shifts (0,1) == (1,0)
+                            np.roll(grid, shift=(-1, 0), axis=0)])
         # change in energy of flipping a spin
         DeltaE = 2 * J * (grid * interactions) # element wise multiplication
         # transition probabilities
@@ -41,7 +48,8 @@ def metro_ising(T, runtime, plot='static', N=None, grid=None):
             plt.axis('off')
             clear_output(wait=True)
             plt.show()
-        
+    
+    ## plot final frame
     if plot == 'static':
         plt.figure(figsize=(6,6)) 
         plt.imshow(grid,cmap='gray')

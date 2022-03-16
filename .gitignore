@@ -1,8 +1,8 @@
-**/.DS_Store
-**/.ipynb_checkpoints
+.DS_Store
+.ipynb_checkpoints
 fig/
 venv/
-**/__pycache__
+__pycache__
 data/experiments/
 data/spikes/
 .vscode

@@ -1,10 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from collections import defaultdict
 from sklearn.decomposition import PCA
 from fooof import FOOOFGroup, FOOOF
-from scipy import io, signal, stats
+from scipy import stats
 from neurodsp.spectral import compute_spectrum
 
 # from numba import jit
@@ -34,6 +33,7 @@ def fooofy(components, spectra, x_range, group = True):
     offsets = fg.get_params('aperiodic_params', 'offset')
     return exponents, errors, offsets
 
+
 def pca(data, n_pc):
     """
     Decomposition in space
@@ -44,6 +44,7 @@ def pca(data, n_pc):
     evals = pop_pca.explained_variance_ratio_
 
     return evals
+
 
 def ft_on_data(subset, **ft_kwargs):
     """
@@ -57,6 +58,7 @@ def ft_on_data(subset, **ft_kwargs):
     freqs, powers_chans = compute_spectrum(subset.T, **ft_kwargs)   #returns a matrix! #TODO make sure transpose
 
     return freqs, powers_summed, powers_chans
+
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
 def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_iter=150):
@@ -106,6 +108,7 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
                 'ft_b2':ft_offsets2 }
 
     return spectra, fit_dict
+
 
 def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_range = [0,None]):
     """Do random_subset_decomp over incrementing subset sizes

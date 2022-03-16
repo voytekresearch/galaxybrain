@@ -4,20 +4,27 @@ import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
 import os
-### Helper functions
+
+
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+
+########################
+### Helper functions ###
+########################
 
 def noticks():
     plt.xticks([]);    plt.yticks([])
     
+
 def pltlabel(title, x, y, size=14):
     plt.title(title, fontsize=size)
     plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
+
 
 def colorcycler(color_range, num):
     cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
     mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
 
-CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def rc_style(font_size=14, n_c=None):
     """n_c: number of cylcer iters"""
@@ -26,26 +33,32 @@ def rc_style(font_size=14, n_c=None):
     if n_c:
         plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
 
-### Analysis functions
+##########################
+### Analysis functions ###
+##########################
+
 def corr_plot(corr_data, kind, subsetsizes, n_trials):
     label_map = {'Pearson':'r','Spearman':'ρ'}
     corr_data = np.array([corr_data[i] for i in range(n_trials)], dtype=float)
-    plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color = 'blue', alpha = 0.5)
+    plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color='blue', alpha=0.5)
     plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
     #plt.plot(subsetsizes, pearson_corr, color = 'blue', alpha = 0.5)
     plt.title(f'{kind}\'s {label_map[kind]} as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel(f'{label_map[kind]}')
 
+
 def p_plot(p_data, kind, subsetsizes, n_trials):
+    """p value plot"""
     p_data = np.log10(np.array([p_data[i] for i in range(n_trials)], dtype=float))
-    plt.errorbar(subsetsizes, p_data.mean(0), p_data.std(0), color = 'green', alpha = 0.5)
+    plt.errorbar(subsetsizes, p_data.mean(0), p_data.std(0), color='green', alpha=0.5)
     plt.plot(subsetsizes, p_data.T, 'go', alpha=0.5)
-    plt.axhline(np.log10(0.05), linestyle = '--', color = 'orange', lw = 2, alpha = 0.75, label = 'p = 0.05')
+    plt.axhline(np.log10(0.05), linestyle='--', color='orange', lw=2, alpha=0.75, label='p = 0.05')
     plt.legend()
     #plt.semilogy(subsetsizes, p_data, color = 'green', alpha = 0.5)
     # plt.yscale('log')
     plt.title(f'{kind} p value as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel('$log_{10}p$') 
+
 
 def plot_all_measures(data, meta):
     """
@@ -84,19 +97,19 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(0,0.505,0.005), pows.T, 'k', lw=1, alpha=0.2)
         #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0), 'r')
         plt.plot(np.arange(0,61/120, 1/120), mean_pows)
-        plt.yscale('log'); plt.xscale('log');
+        plt.yscale('log'); plt.xscale('log')
         plt.title('Power Spectrum')
         plt.xlabel('Frequency (Hz)'); plt.ylabel('Power')
 
     #Space dimension slopes
     plt.subplot(4,5,2)
-    plt.errorbar(subsetsizes[1:], data['espec_exp'].mean(0)[1:], data['espec_exp'].std(0)[1:], color = 'black', alpha = 0.5)
+    plt.errorbar(subsetsizes[1:], data['espec_exp'].mean(0)[1:], data['espec_exp'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average eigenvalue spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 
     #Time dimension slopes
     plt.subplot(4,5,7)
-    plt.errorbar(subsetsizes[1:], data['psd_exp1'].mean(0)[1:], data['psd_exp1'].std(0)[1:], color = 'black', alpha = 0.5)
+    plt.errorbar(subsetsizes[1:], data['psd_exp1'].mean(0)[1:], data['psd_exp1'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average power spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 
@@ -139,7 +152,7 @@ def plot_all_measures(data, meta):
 
     #Time dimension slopes
     plt.subplot(4,5,17)
-    plt.errorbar(subsetsizes[1:], data['psd_exp2'].mean(0)[1:], data['psd_exp2'].std(0)[1:], color = 'black', alpha = 0.5)
+    plt.errorbar(subsetsizes[1:], data['psd_exp2'].mean(0)[1:], data['psd_exp2'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average power spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 

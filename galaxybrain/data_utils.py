@@ -57,7 +57,7 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         # add spike time into each
         spikes_all += [np.sort(st[clu==k]) for k in np.unique(clu)]
 
-    if return_type is 'spiketimes':
+    if return_type == 'spiketimes':
         return spikes_all, clu_info
 
     print('Binning Spikes...')
@@ -72,10 +72,10 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         df_spk.insert(0,reg,df_spk[grp.index].sum(1))
     df_spk.insert(0,'all',pop_rate)
 
-    if return_type is 'binned':
+    if return_type == 'binned':
         return df_spk, clu_info
 
-    if return_type is 'smoothed':
+    if return_type == 'smoothed':
         print('Smoothing...')
         win_len, win_std = smooth_param
         win = signal.windows.gaussian(int(win_len/bin_width)+1, win_std/bin_width)
