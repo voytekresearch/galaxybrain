@@ -37,7 +37,7 @@ def rc_style(font_size=14, n_c=None):
 def solo_colorbar(colors, num, range, label):
     """
     colors: list e.g., ['#111d6c', '#e03694']
-
+    range: length 2 list of form [min, max]
     """
     cmap = mpl.colors.LinearSegmentedColormap.from_list(name='',
                                             colors=colors, N=num)

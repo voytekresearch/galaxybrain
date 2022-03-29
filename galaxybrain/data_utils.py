@@ -237,7 +237,6 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
     only plots if directory of figures given
     '''
     data_dict = dict()
-    
     if analysis_args == None:
         with open(f'{dir_}/analysis_args.json','r') as f:
             analysis_args = json.load(f)
@@ -261,7 +260,7 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
                         eigs, pows, space_r2, time_r2, decomp_arr = load_npz(f'{dir_}/{mouse}/{region}/ramsey_{i+1}.npz', kind, decomp_arr)
                 
                 decomp_arr = np.array(decomp_arr, dtype=object)
-                meta = {'count':count, **analysis_args['ramsey_params'], 'pc_range':[0,None], 'subsetsizes':subset_sizes}
+                meta = {'count':count, 'subsetsizes':subset_sizes}
                 if kind == 'mouse':
                     data = { 
                             'pca_er':pca_er, 'ft_er1':ft_er1, 'ft_er2':ft_er2,
@@ -281,7 +280,7 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
                             'pearson_p':decomp_arr[:,4], 'spearman_p1':decomp_arr[:,5],
                             }
 
-                data_dict[mouse][region] = {'meta': meta, 'data':data} #appending a big tuple that includes the data
+                data_dict[mouse][region] = {'meta':meta, 'data':data} #appending a big tuple that includes the data
                 
                 if plot: #saves plots in folder
                     ramsey.plot_all_measures(data, meta)
@@ -299,7 +298,7 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
             
             decomp_arr = np.array(decomp_arr, dtype=object)
             meta = {'subsetsizes':subset_sizes, **analysis_args['ramsey_params']}
-            data = {'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}
+            data = {'space_er':space_er, 'time_er':time_er, 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}
             data_dict[f'{t:.2f}'] = {'meta':meta, 'data':data}
             
             if plot:
@@ -314,7 +313,7 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
         for i in range(n_loop):
             eigs, pows, space_er, time_er, decomp_arr = load_npz(f'{dir_}/ramsey_{i+1}.npz')
         decomp_arr = np.array(decomp_arr)
-        data_dict = {**analysis_args['ramsey_params'], **{'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}}
+        data_dict = {'subsetsizes':subset_sizes, 'space_er':space_er, 'time_er':time_er, 'pc_range':[0,None], 'eigs':eigs, 'pows':pows, 'espec_exp': decomp_arr[:,0].mean(0), 'psd_exp': decomp_arr[:,1].mean(0), 'pearson_corr':decomp_arr[:,2], 'spearman_corr':decomp_arr[:,3], 'pearson_p':decomp_arr[:,4], 'spearman_p':decomp_arr[:,5]}
         
         if plot:
             plot_utils.plot_all_measures(data_dict)
@@ -322,5 +321,6 @@ def load_results(dir_, kind='mouse', plot=None, analysis_args=None):
             plt.close('all')
             plt.pause(0.01)
 
+    data_dict['meta'] = {**analysis_args['ramsey_params'], 'pc_range':[0,None]} # meta for all data
     return data_dict
 
