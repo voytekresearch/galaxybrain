@@ -16,7 +16,7 @@ def noticks():
     plt.xticks([]);    plt.yticks([])
     
 
-def pltlabel(title, x, y, size=14):
+def pltlabel(title='', x='', y='', size=14):
     plt.title(title, fontsize=size)
     plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
 
@@ -32,6 +32,17 @@ def rc_style(font_size=14, n_c=None):
     # plt.rcParams['font.font_size'] = font_size
     if n_c:
         plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
+
+
+def solo_colorbar(colors, num, range, label):
+    """
+    colors: list e.g., ['#111d6c', '#e03694']
+
+    """
+    cmap = mpl.colors.LinearSegmentedColormap.from_list(name='',
+                                            colors=colors, N=num)
+    norm = mpl.colors.Normalize(*range)
+    plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label)
 
 ##########################
 ### Analysis functions ###

@@ -13,7 +13,7 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 
 
-def fooofy(components, spectra, x_range, group = True):
+def fooofy(components, spectra, x_range, group=True):
     """
     fit FOOOF model on given spectrum and return params
         components: frequencies or PC dimensions
