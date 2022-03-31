@@ -44,6 +44,19 @@ def solo_colorbar(colors, num, range, label):
     norm = mpl.colors.Normalize(*range)
     plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label)
 
+
+def silent_plot(fx, fx_args, fn):
+    """
+    save plot directly into directory
+        fx: plotting func
+        fx_args: data for fx
+        fn: filename
+     """
+    fx(*fx_args)
+    plt.savefig(fn)
+    plt.close('all')
+    plt.pause(0.01)
+
 ##########################
 ### Analysis functions ###
 ##########################
@@ -53,7 +66,7 @@ def corr_plot(corr_data, kind, subsetsizes, n_trials):
     corr_data = np.array([corr_data[i] for i in range(n_trials)], dtype=float)
     plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color='blue', alpha=0.5)
     plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
-    #plt.plot(subsetsizes, pearson_corr, color = 'blue', alpha = 0.5)
+    #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
     plt.title(f'{kind}\'s {label_map[kind]} as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel(f'{label_map[kind]}')
 
@@ -75,8 +88,8 @@ def plot_all_measures(data, meta):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
     """
-    subsetsizes = data['subsetsizes']
-    n_pc = data['n_pc']
+    subsetsizes = meta['subsetsizes']
+    n_pc = meta['n_pc']
     n = len(subsetsizes)
     #stylistic details
     rc_style(n_c=n)
@@ -114,13 +127,13 @@ def plot_all_measures(data, meta):
 
     #Space dimension slopes
     plt.subplot(4,5,2)
-    plt.errorbar(subsetsizes[1:], data['espec_exp'].mean(0)[1:], data['espec_exp'].std(0)[1:], color='black', alpha=0.5)
+    plt.errorbar(subsetsizes[1:], data['pca_m'].mean(0)[1:], data['pca_m'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average eigenvalue spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 
     #Time dimension slopes
     plt.subplot(4,5,7)
-    plt.errorbar(subsetsizes[1:], data['psd_exp1'].mean(0)[1:], data['psd_exp1'].std(0)[1:], color='black', alpha=0.5)
+    plt.errorbar(subsetsizes[1:], data['ft_m1'].mean(0)[1:], data['ft_m1'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average power spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 
@@ -136,14 +149,14 @@ def plot_all_measures(data, meta):
     plt.title('Fit error for power spectrum \n at subset size')
     plt.xlabel('Subset Size');      plt.ylabel('error')
 
-    n_trials = data['pearson_corr1'].shape[0]
+    n_trials = data['pearson_r1'].shape[0]
     #Pearson (R) Correlation value as function of subset size
     plt.subplot(4,5,4)
-    corr_plot(data['pearson_corr1'], 'Pearson', subsetsizes, n_trials)
+    corr_plot(data['pearson_r1'], 'Pearson', subsetsizes, n_trials)
 
     #Spearman (Rho) Correlation value as function of subset size
     plt.subplot(4,5,9)
-    corr_plot(data['spearman_corr1'], 'Spearman', subsetsizes,n_trials)
+    corr_plot(data['spearman_rho1'], 'Spearman', subsetsizes,n_trials)
 
     #Pearson p values
     plt.subplot(4,5,5)
@@ -163,7 +176,7 @@ def plot_all_measures(data, meta):
 
     #Time dimension slopes
     plt.subplot(4,5,17)
-    plt.errorbar(subsetsizes[1:], data['psd_exp2'].mean(0)[1:], data['psd_exp2'].std(0)[1:], color='black', alpha=0.5)
+    plt.errorbar(subsetsizes[1:], data['ft_m2'].mean(0)[1:], data['ft_m2'].std(0)[1:], color='black', alpha=0.5)
     plt.title('Average power spectrum exponent \n at each subset size')
     plt.xlabel('Subset Size');      plt.ylabel('Exponent')
 
@@ -180,11 +193,11 @@ def plot_all_measures(data, meta):
 
     #Pearson (R) Correlation value as function of subset size
     plt.subplot(4,5,14)
-    corr_plot(data['pearson_corr2'], 'Pearson', subsetsizes, n_trials)
+    corr_plot(data['pearson_r2'], 'Pearson', subsetsizes, n_trials)
 
     #Spearman (Rho) Correlation value as function of subset size
     plt.subplot(4,5,19)
-    corr_plot(data['spearman_corr2'], 'Spearman', subsetsizes, n_trials)
+    corr_plot(data['spearman_rho2'], 'Spearman', subsetsizes, n_trials)
 
     #Pearson p values
     plt.subplot(4,5,15)

@@ -21,6 +21,8 @@ pool = mp.Pool(8)
 
 def run_analysis(output_dir, num_trials, ramsey_params, time, burn_in = 20, shuffle = False, parallel=True):
     """
+    Gaussian noise simulation
+    
     output_dir: assumes you've made expNUM folder
     ramsey_params: params besides data and subsetsizes
     burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb
