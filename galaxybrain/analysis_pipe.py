@@ -19,6 +19,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 cores = mp.cpu_count()
 pool = mp.Pool(7)
 
+
 def shuffle_data(data, axis): 
     """Helper function to shuffle data"""
     if axis == 'time':
@@ -28,6 +29,7 @@ def shuffle_data(data, axis):
     elif axis == 'space':
         raster_curr = data.apply(np.random.permutation, axis=1, result_type='broadcast') #need broadcast to maintain shape
     return raster_curr
+
 
 def run_analysis(output_dir, mice_regions, num_trials, ramsey_params, burn_in = 20, shuffle = False, mouse_in = ['krebs', 'robbins', 'waksman'],parallel=True):
     """

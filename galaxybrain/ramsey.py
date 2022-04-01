@@ -110,7 +110,7 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
     return spectra, fit_dict
 
 
-def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_range = [0,None]):
+def ramsey(data, subset_sizes, n_iters, n_pc=None, pc_range=[0,None], f_range=[0,None]):
     """Do random_subset_decomp over incrementing subset sizes
     slope dims: n_iters * amount of subset sizes
     b: offsets
@@ -131,10 +131,8 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
 
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subset_sizes)
-
         elif isinstance(n_pc, int) and n_pc < n_i:
             n_pc_curr = n_pc
-
         elif isinstance(n_pc, float):
             n_pc_curr = int(n_pc*n_i)
 
@@ -142,7 +140,6 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         # [0,None] for whole range, otherwise check if float for fraction
         if pc_range == [0,None]:
             curr_pc_range = [0, int(min(.5*n_pc_curr, .25*max(subset_sizes*n_pc)))]
-
         elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
@@ -150,7 +147,6 @@ def ramsey(data, subset_sizes, n_iters, n_pc = None, pc_range = [0,None], f_rang
         #f_range conditions
         if isinstance(f_range[1], float):
             curr_f_range = [f_range[0],f_range[1]]
-
         elif f_range[1] == None:
             curr_f_range = None
 

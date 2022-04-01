@@ -16,6 +16,8 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 matplotlib.rc('figure', max_open_warning = 0)
 
+
+# region : size
 MICE_REGIONS = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
                 'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
                 'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
@@ -223,7 +225,8 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
         
         decomp_dict = {k : np.array(decomp_dict[k]) for k in decomp_dict} # to access np methods
         for k in list(decomp_dict): # avoid RuntimeError: dictionary changed size during iteration from .pop
-            if '_m' in k: # the slopes are the only ones averaged
+            # Average the slopes
+            if '_m' in k: 
                 decomp_dict[k] = decomp_dict[k].mean(0)
             ## str substitution for more pragmatic label (TODO: rename it in data files instead)
             if '_r' in k:
@@ -279,6 +282,4 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
 
     data_dict['meta'] = {**analysis_args['ramsey_params'], 'pc_range':[0,None]} # meta for all data
     
-
-    convert = {'spearman_rho'}
     return data_dict

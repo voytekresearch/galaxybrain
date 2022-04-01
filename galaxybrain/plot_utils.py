@@ -17,8 +17,12 @@ def noticks():
     
 
 def pltlabel(title='', x='', y='', size=14):
-    plt.title(title, fontsize=size)
+    pltlabel(title, fontsize=size)
     plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
+
+
+def logaxes():
+    plt.yscale('log');    plt.xscale('log')
 
 
 def colorcycler(color_range, num):
@@ -67,7 +71,7 @@ def corr_plot(corr_data, kind, subsetsizes, n_trials):
     plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color='blue', alpha=0.5)
     plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
     #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
-    plt.title(f'{kind}\'s {label_map[kind]} as function of subset size')
+    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size')
     plt.xlabel('Subset Size'); plt.ylabel(f'{label_map[kind]}')
 
 
@@ -80,8 +84,7 @@ def p_plot(p_data, kind, subsetsizes, n_trials):
     plt.legend()
     #plt.semilogy(subsetsizes, p_data, color = 'green', alpha = 0.5)
     # plt.yscale('log')
-    plt.title(f'{kind} p value as function of subset size')
-    plt.xlabel('Subset Size'); plt.ylabel('$log_{10}p$') 
+    pltlabel(f'{kind} p value as function of subset size', 'Subset Size', '$log_{10}p$')
 
 
 def plot_all_measures(data, meta):
@@ -101,53 +104,46 @@ def plot_all_measures(data, meta):
         mean_pows = data['pows'][i]
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subsetsizes)
-
         elif type(n_pc) == int and n_pc < n_i:
             n_pc_curr = n_pc
-
         elif type(n_pc) == float:
             n_pc_curr = int(n_pc*n_i)
 
-        # plot eigenspectrum
+        # Eigenspectrum
         plt.subplot(4,5,1)
-        #plt.loglog(np.arange(1,n_pc+1), evs.T, 'k', lw=1, alpha=0.2)
-        #plt.loglog(np.arange(1,n_pc+1), evs.mean(0), 'r')
+        #plt.loglog(np.arange(1,n_pc+1), evs.T)
+        #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
-        plt.yscale('log'); plt.xscale('log');
-        plt.title('Eigenvalue Spectrum')
-        plt.xlabel('PC dimension'); plt.ylabel('Variance')
-        #plot powerspectrum
+        logaxes();
+        pltlabel('Eigenvalue Spectrum', 'PC dimension', 'Variance')
+        
+        # PSD
         plt.subplot(4,5,6)
-        #plt.loglog(np.arange(0,0.505,0.005), pows.T, 'k', lw=1, alpha=0.2)
-        #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0), 'r')
+        #plt.loglog(np.arange(0,0.505,0.005), pows.T)
+        #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0))
         plt.plot(np.arange(0,61/120, 1/120), mean_pows)
-        plt.yscale('log'); plt.xscale('log')
-        plt.title('Power Spectrum')
-        plt.xlabel('Frequency (Hz)'); plt.ylabel('Power')
+        logaxes()
+        pltlabel('Power Spectrum', 'Frequency (Hz)', 'Power')
 
     #Space dimension slopes
     plt.subplot(4,5,2)
     plt.errorbar(subsetsizes[1:], data['pca_m'].mean(0)[1:], data['pca_m'].std(0)[1:], color='black', alpha=0.5)
-    plt.title('Average eigenvalue spectrum exponent \n at each subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('Exponent')
+    pltlabel('Average eigenvalue spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
     #Time dimension slopes
     plt.subplot(4,5,7)
     plt.errorbar(subsetsizes[1:], data['ft_m1'].mean(0)[1:], data['ft_m1'].std(0)[1:], color='black', alpha=0.5)
-    plt.title('Average power spectrum exponent \n at each subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('Exponent')
+    pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
     #PCA goodness of fit
     plt.subplot(4,5,3)
-    plt.plot(subsetsizes[:], data['pca_er'].T[:], ".", color = 'purple', lw=1, alpha=0.2)
-    plt.title('Fit error for eigenspectrum \n at subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('error')
+    plt.plot(subsetsizes[:], data['pca_er'].T[:], ".", color='purple', lw=1, alpha=0.2)
+    pltlabel('Fit error for eigenspectrum \n at subset size', 'Subset Size', 'error')
 
     #FFT goodness of fit
     plt.subplot(4,5,8)
-    plt.plot(subsetsizes[:], data['ft_er1'].T[:],  ".", color = 'purple', lw=1, alpha=0.2)
-    plt.title('Fit error for power spectrum \n at subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('error')
+    plt.plot(subsetsizes[:], data['ft_er1'].T[:],  ".", color='purple', lw=1, alpha=0.2)
+    pltlabel('Fit error for power spectrum \n at subset size', 'Subset Size', 'error')
 
     n_trials = data['pearson_r1'].shape[0]
     #Pearson (R) Correlation value as function of subset size
@@ -156,7 +152,7 @@ def plot_all_measures(data, meta):
 
     #Spearman (Rho) Correlation value as function of subset size
     plt.subplot(4,5,9)
-    corr_plot(data['spearman_rho1'], 'Spearman', subsetsizes,n_trials)
+    corr_plot(data['spearman_rho1'], 'Spearman', subsetsizes, n_trials)
 
     #Pearson p values
     plt.subplot(4,5,5)
@@ -177,8 +173,7 @@ def plot_all_measures(data, meta):
     #Time dimension slopes
     plt.subplot(4,5,17)
     plt.errorbar(subsetsizes[1:], data['ft_m2'].mean(0)[1:], data['ft_m2'].std(0)[1:], color='black', alpha=0.5)
-    plt.title('Average power spectrum exponent \n at each subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('Exponent')
+    pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
     #PCA goodness of fit
     plt.subplot(4,5,13)
@@ -186,9 +181,8 @@ def plot_all_measures(data, meta):
 
     #FFT goodness of fit
     plt.subplot(4,5,18)
-    plt.plot(subsetsizes[:], data['ft_er2'].T[:],  ".", color = 'purple', lw=1, alpha=0.2)
-    plt.title('Fit error for power spectrum \n at subset size')
-    plt.xlabel('Subset Size');      plt.ylabel('error')
+    plt.plot(subsetsizes[:], data['ft_er2'].T[:],  ".", color='purple', lw=1, alpha=0.2)
+    pltlabel('Fit error for power spectrum \n at subset size', 'Subset Size', 'error')
 
 
     #Pearson (R) Correlation value as function of subset size
