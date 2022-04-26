@@ -17,7 +17,7 @@ def noticks():
     
 
 def pltlabel(title='', x='', y='', size=14):
-    pltlabel(title, fontsize=size)
+    plt.title(title, fontsize=size)
     plt.xlabel(x, fontsize=size);    plt.ylabel(y, fontsize=size)
 
 
@@ -25,9 +25,12 @@ def logaxes():
     plt.yscale('log');    plt.xscale('log')
 
 
-def colorcycler(color_range, num):
+def colorcycler(color_range, num, default=True):
     cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
-    mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
+    if default: # hard codes it in kernel
+        mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
+    else:
+        return cmap
 
 
 def rc_style(font_size=14, n_c=None):
