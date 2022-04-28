@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
+import seaborn as sb
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
 import os
@@ -41,14 +42,15 @@ def rc_style(font_size=14, n_c=None):
         plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
 
 
-def solo_colorbar(colors, num, range, label):
+def solo_colorbar(colors, values, label):
     """
     colors: list e.g., ['#111d6c', '#e03694']
     range: length 2 list of form [min, max]
     """
+    num, range_ = len(values), (values[0], values[-1])
     cmap = mpl.colors.LinearSegmentedColormap.from_list(name='',
                                             colors=colors, N=num)
-    norm = mpl.colors.Normalize(*range)
+    norm = mpl.colors.Normalize(*range_)
     plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label)
 
 
@@ -68,18 +70,23 @@ def silent_plot(fx, fx_args, fn):
 ### Analysis functions ###
 ##########################
 
-def corr_plot(corr_data, kind, subsetsizes, n_trials):
+def corr_plot(corr_data, kind, subsetsizes, p_data=None):
+    """if given p_data, annotates point of p>0.05 with a '*' """
+    n_trials = corr_data.shape[0]
     label_map = {'Pearson':'r','Spearman':'ρ'}
     corr_data = np.array([corr_data[i] for i in range(n_trials)], dtype=float)
     plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color='blue', alpha=0.5)
     plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
     #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
-    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size')
-    plt.xlabel('Subset Size'); plt.ylabel(f'{label_map[kind]}')
+    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'Subset Size', f'{label_map[kind]}')
+    if p_data:
+        for x, y, p in zip(subsetsizes, corr_data, p_data):
+            if p >= 0.05:
+                plt.annotate('*', (x,y), size=30)
 
 
 def p_plot(p_data, kind, subsetsizes, n_trials):
-    """p value plot"""
+    n_trials = p_data.shape[0]
     p_data = np.log10(np.array([p_data[i] for i in range(n_trials)], dtype=float))
     plt.errorbar(subsetsizes, p_data.mean(0), p_data.std(0), color='green', alpha=0.5)
     plt.plot(subsetsizes, p_data.T, 'go', alpha=0.5)
@@ -90,9 +97,23 @@ def p_plot(p_data, kind, subsetsizes, n_trials):
     pltlabel(f'{kind} p value as function of subset size', 'Subset Size', '$log_{10}p$')
 
 
+def goodness_of_fit_plot(subsetsizes, data, spec):
+    """spec in: ['pca_er', 'ft_er1', 'ft_er2']"""
+    if 'pca' in spec:
+        title_spec = 'eigenspectrum'
+    else:
+        title_spec = 'power spectrum'
+    plt.plot(subsetsizes[:], data[spec].T[:], ".", color='purple', lw=1, alpha=0.2)
+    pltlabel(f'Fit error for {title_spec} \n at subset size', 'Subset Size', 'error')
+
+
 def plot_all_measures(data, meta):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
+
+    plot layout:
+    [ ES  ]  [ subset size vs ES exponent  ]
+    [ PSD ]  [ subset size vs PSD exponent ]
     """
     subsetsizes = meta['subsetsizes']
     n_pc = meta['n_pc']
@@ -103,13 +124,13 @@ def plot_all_measures(data, meta):
 
     #plot spectra
     for i, n_i in enumerate(subsetsizes):
-        mean_evs = data['eigs'][i]
+        mean_evs  = data['eigs'][i]
         mean_pows = data['pows'][i]
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subsetsizes)
-        elif type(n_pc) == int and n_pc < n_i:
+        elif isinstance(n_pc, int) and n_pc < n_i:
             n_pc_curr = n_pc
-        elif type(n_pc) == float:
+        elif isinstance(n_pc, float):
             n_pc_curr = int(n_pc*n_i)
 
         # Eigenspectrum
@@ -117,7 +138,7 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(1,n_pc+1), evs.T)
         #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
-        logaxes();
+        logaxes()
         pltlabel('Eigenvalue Spectrum', 'PC dimension', 'Variance')
         
         # PSD
@@ -138,71 +159,23 @@ def plot_all_measures(data, meta):
     plt.errorbar(subsetsizes[1:], data['ft_m1'].mean(0)[1:], data['ft_m1'].std(0)[1:], color='black', alpha=0.5)
     pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
-    #PCA goodness of fit
-    plt.subplot(4,5,3)
-    plt.plot(subsetsizes[:], data['pca_er'].T[:], ".", color='purple', lw=1, alpha=0.2)
-    pltlabel('Fit error for eigenspectrum \n at subset size', 'Subset Size', 'error')
-
-    #FFT goodness of fit
-    plt.subplot(4,5,8)
-    plt.plot(subsetsizes[:], data['ft_er1'].T[:],  ".", color='purple', lw=1, alpha=0.2)
-    pltlabel('Fit error for power spectrum \n at subset size', 'Subset Size', 'error')
-
-    n_trials = data['pearson_r1'].shape[0]
-    #Pearson (R) Correlation value as function of subset size
-    plt.subplot(4,5,4)
-    corr_plot(data['pearson_r1'], 'Pearson', subsetsizes, n_trials)
-
-    #Spearman (Rho) Correlation value as function of subset size
-    plt.subplot(4,5,9)
-    corr_plot(data['spearman_rho1'], 'Spearman', subsetsizes, n_trials)
-
-    #Pearson p values
-    plt.subplot(4,5,5)
-    p_plot(data['pearson_p1'], 'Pearson', subsetsizes, n_trials)
-
-    #Spearman p values
-    plt.subplot(4,5,10)
-    p_plot(data['spearman_p1'], 'Spearman', subsetsizes, n_trials)
-
-    ## NOSUM
-    plt.subplot(4,5,11)
-    plt.plot() #SPECTRUM
-
-    #Space dimension slopes
-    plt.subplot(4,5,12)
-    plt.plot() 
-
-    #Time dimension slopes
-    plt.subplot(4,5,17)
-    plt.errorbar(subsetsizes[1:], data['ft_m2'].mean(0)[1:], data['ft_m2'].std(0)[1:], color='black', alpha=0.5)
-    pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
-
-    #PCA goodness of fit
-    plt.subplot(4,5,13)
-    plt.plot()
-
-    #FFT goodness of fit
-    plt.subplot(4,5,18)
-    plt.plot(subsetsizes[:], data['ft_er2'].T[:],  ".", color='purple', lw=1, alpha=0.2)
-    pltlabel('Fit error for power spectrum \n at subset size', 'Subset Size', 'error')
-
-
-    #Pearson (R) Correlation value as function of subset size
-    plt.subplot(4,5,14)
-    corr_plot(data['pearson_r2'], 'Pearson', subsetsizes, n_trials)
-
-    #Spearman (Rho) Correlation value as function of subset size
-    plt.subplot(4,5,19)
-    corr_plot(data['spearman_rho2'], 'Spearman', subsetsizes, n_trials)
-
-    #Pearson p values
-    plt.subplot(4,5,15)
-    p_plot(data['pearson_p2'], 'Pearson', subsetsizes, n_trials)
-
-    #Spearman p values
-    plt.subplot(4,5,20)
-    p_plot(data['spearman_p2'], 'Spearman', subsetsizes, n_trials)
-
     plt.tight_layout()
     plt.draw()
+
+
+def plot_dist(data, rgn, exp_kind, title, kind='violin'):
+    '''Plot distirbution either with violin or hist
+    data: data dictionary of standard format'''
+    colors = list(iter(plt.cm.cool(np.linspace(0, 1, 16))))
+    mouse = 'krebs'
+    if kind == 'violin':
+        sb.violinplot(data=data[mouse][rgn]['data'][f'psd_exp{exp_kind}'], palette=colors, linewidth=0.3)
+    else:
+        for e in data[mouse][rgn]['data'][f'psd_exp{exp_kind}'].T:
+            plt.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
+        if title=='Summed':
+            plt.legend(loc='center right', bbox_to_anchor=(0, 0.5))
+        else:
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            
+    plt.title(title)
