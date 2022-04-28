@@ -79,13 +79,14 @@ def corr_plot(corr_data, kind, subsetsizes, p_data=None):
     plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
     #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
     pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'Subset Size', f'{label_map[kind]}')
-    if p_data:
-        for x, y, p in zip(subsetsizes, corr_data, p_data):
+    if p_data.any(): # .any() because array
+        x_offset = subsetsizes[-1] * .03 # tried and true
+        for x, y, p in zip(subsetsizes, corr_data.mean(0), p_data.mean(0)):
             if p >= 0.05:
-                plt.annotate('*', (x,y), size=30)
+                plt.annotate('*', (x-x_offset,y), size=30)
 
 
-def p_plot(p_data, kind, subsetsizes, n_trials):
+def p_plot(p_data, kind, subsetsizes):
     n_trials = p_data.shape[0]
     p_data = np.log10(np.array([p_data[i] for i in range(n_trials)], dtype=float))
     plt.errorbar(subsetsizes, p_data.mean(0), p_data.std(0), color='green', alpha=0.5)
@@ -120,7 +121,7 @@ def plot_all_measures(data, meta):
     n = len(subsetsizes)
     #stylistic details
     rc_style(n_c=n)
-    plt.figure(figsize=(23,15))
+    plt.figure(figsize=(8,8))
 
     #plot spectra
     for i, n_i in enumerate(subsetsizes):
@@ -134,7 +135,7 @@ def plot_all_measures(data, meta):
             n_pc_curr = int(n_pc*n_i)
 
         # Eigenspectrum
-        plt.subplot(4,5,1)
+        plt.subplot(2,2,1)
         #plt.loglog(np.arange(1,n_pc+1), evs.T)
         #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
@@ -142,7 +143,7 @@ def plot_all_measures(data, meta):
         pltlabel('Eigenvalue Spectrum', 'PC dimension', 'Variance')
         
         # PSD
-        plt.subplot(4,5,6)
+        plt.subplot(2,2,3)
         #plt.loglog(np.arange(0,0.505,0.005), pows.T)
         #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0))
         plt.plot(np.arange(0,61/120, 1/120), mean_pows)
@@ -150,12 +151,12 @@ def plot_all_measures(data, meta):
         pltlabel('Power Spectrum', 'Frequency (Hz)', 'Power')
 
     #Space dimension slopes
-    plt.subplot(4,5,2)
+    plt.subplot(2,2,2)
     plt.errorbar(subsetsizes[1:], data['pca_m'].mean(0)[1:], data['pca_m'].std(0)[1:], color='black', alpha=0.5)
     pltlabel('Average eigenvalue spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
     #Time dimension slopes
-    plt.subplot(4,5,7)
+    plt.subplot(2,2,4)
     plt.errorbar(subsetsizes[1:], data['ft_m1'].mean(0)[1:], data['ft_m1'].std(0)[1:], color='black', alpha=0.5)
     pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 

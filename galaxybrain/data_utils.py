@@ -3,14 +3,13 @@ from scipy import io, signal
 import pandas as pd
 import sys, os
 import json
+import re
 
 sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-import ramsey
 from plot_utils import silent_plot, plot_all_measures
 
-import matplotlib.pyplot as plt
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
@@ -231,7 +230,10 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
             ## str substitution for more pragmatic label (TODO: rename it in data files instead)
             if '_r' in k:
                 ix = k.index('_') + 1
-                k_new = k[:ix] + 'corr'
+                try: # get number '1' or '2' from key string
+                    k_new = k[:ix] + 'corr' + re.search('\d+', k)[0]
+                except:
+                    k_new = k[:ix] + 'corr'
                 decomp_dict[k_new] = decomp_dict.pop(k)
         ## retrieve other values
         other_spec_data = load_npz(fn, kind, one_time=True)
