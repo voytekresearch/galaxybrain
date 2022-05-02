@@ -26,6 +26,11 @@ def logaxes():
     plt.yscale('log');    plt.xscale('log')
 
 
+def rc_style(font_size=14):
+    """n_c: number of cylcer iters"""
+    plt.style.use(CURR_DIR+'/mplrc_notebook')
+
+
 def colorcycler(color_range, num, default=True):
     cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
     if default: # hard codes it in kernel
@@ -34,24 +39,23 @@ def colorcycler(color_range, num, default=True):
         return cmap
 
 
-def rc_style(font_size=14, n_c=None):
-    """n_c: number of cylcer iters"""
-    plt.style.use(CURR_DIR+'/mplrc_notebook')
-    # plt.rcParams['font.font_size'] = font_size
-    if n_c:
-        plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.cool(np.linspace(0,1,n_c)))
-
-
-def solo_colorbar(colors, values, label):
+def solo_colorbar(colors, values, label, grad='continuous', orientation='vertical', cax=None):
     """
     colors: list e.g., ['#111d6c', '#e03694']
     range: length 2 list of form [min, max]
+    fig: either default plt or plt.figure
     """
     num, range_ = len(values), (values[0], values[-1])
-    cmap = mpl.colors.LinearSegmentedColormap.from_list(name='',
-                                            colors=colors, N=num)
-    norm = mpl.colors.Normalize(*range_)
-    plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label)
+    if grad == 'continuous': # for some reason still looks discrete sometimes
+        cmap = mpl.colors.LinearSegmentedColormap.from_list(name='', colors=colors, N=num)
+        norm = mpl.colors.Normalize(*range_)
+        plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label, orientation=orientation, cax=cax)
+    elif grad == 'discrete':
+        colors = colorcycler(colors, num, False)
+        cmap, norm = mpl.colors.from_levels_and_colors(np.linspace(*range_, num+1), colors)
+        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, label=label, format='%.1f', orientation=orientation, cax=cax)
 
 
 def silent_plot(fx, fx_args, fn):
@@ -108,6 +112,26 @@ def goodness_of_fit_plot(subsetsizes, data, spec):
     pltlabel(f'Fit error for {title_spec} \n at subset size', 'Subset Size', 'error')
 
 
+def exp_plot(data, key, kind='violin', meta=None):
+    """
+    Plot exponent distr over % of neurons
+    data : data dictionary of standard format
+    key  : str in ('pca_m', 'ft_m1', 'ft_m2') 
+    kind : str in ('violin', 'hist', 'errorbar')
+
+    *Note: originally done with kind == 'errorbar'
+    """
+    colors = list(iter(plt.cm.cool(np.linspace(0, 1, 16))))
+    if kind == 'violin':
+        sb.violinplot(data=data[key], palette=colors, linewidth=0.3)
+    elif kind == 'hist':
+        for e in data[key].T:
+            plt.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
+    elif kind == 'errorbar':
+        subsetsizes = meta['subsetsizes']
+        plt.errorbar(subsetsizes[1:], data[key].mean(0)[1:], data[key].std(0)[1:], color='black')
+        
+
 def plot_all_measures(data, meta):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
@@ -120,8 +144,11 @@ def plot_all_measures(data, meta):
     n_pc = meta['n_pc']
     n = len(subsetsizes)
     #stylistic details
-    rc_style(n_c=n)
-    plt.figure(figsize=(8,8))
+    subset_fractions = np.linspace(0,1,n)
+    cmap = plt.cm.cool(subset_fractions)
+    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap)
+
+    fig = plt.figure(figsize=(8,8))
 
     #plot spectra
     for i, n_i in enumerate(subsetsizes):
@@ -150,33 +177,23 @@ def plot_all_measures(data, meta):
         logaxes()
         pltlabel('Power Spectrum', 'Frequency (Hz)', 'Power')
 
+    
+    
     #Space dimension slopes
     plt.subplot(2,2,2)
-    plt.errorbar(subsetsizes[1:], data['pca_m'].mean(0)[1:], data['pca_m'].std(0)[1:], color='black', alpha=0.5)
-    pltlabel('Average eigenvalue spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
+    exp_plot(data, 'pca_m')
+    pltlabel('Eigenvalue spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
 
-    #Time dimension slopes
+    #Time dimension slopes (SUMMED)
     plt.subplot(2,2,4)
-    plt.errorbar(subsetsizes[1:], data['ft_m1'].mean(0)[1:], data['ft_m1'].std(0)[1:], color='black', alpha=0.5)
-    pltlabel('Average power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
+    exp_plot(data, 'ft_m1')
+    pltlabel('Power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
+
+    # colorbar
+    # plt.subplot(3,2,5) #.set_position([40,40, 30, 30])
+    cax = fig.add_axes([1.05,0.3,0.02,0.35])
+    hexes = [mpl.colors.rgb2hex(c) for c in cmap] # VERY hacky way of getting hex values of cmap cool
+    solo_colorbar([hexes[0], hexes[-1]], subset_fractions, 'fraction of neurons', orientation='vertical', cax=cax)
 
     plt.tight_layout()
     plt.draw()
-
-
-def plot_dist(data, rgn, exp_kind, title, kind='violin'):
-    '''Plot distirbution either with violin or hist
-    data: data dictionary of standard format'''
-    colors = list(iter(plt.cm.cool(np.linspace(0, 1, 16))))
-    mouse = 'krebs'
-    if kind == 'violin':
-        sb.violinplot(data=data[mouse][rgn]['data'][f'psd_exp{exp_kind}'], palette=colors, linewidth=0.3)
-    else:
-        for e in data[mouse][rgn]['data'][f'psd_exp{exp_kind}'].T:
-            plt.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
-        if title=='Summed':
-            plt.legend(loc='center right', bbox_to_anchor=(0, 0.5))
-        else:
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-            
-    plt.title(title)
