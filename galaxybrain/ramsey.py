@@ -29,7 +29,7 @@ def fooofy(components, spectra, x_range, group=True):
 
     fg.fit(components, spectra, x_range) # THIS IS WHERE YOU SAY WHICH FREQ RANGE TO FIT
     exponents = fg.get_params('aperiodic_params', 'exponent')
-    errors = fg.get_params('error')
+    errors = fg.get_params('error') # MAE
     offsets = fg.get_params('aperiodic_params', 'offset')
     return exponents, errors, offsets
 

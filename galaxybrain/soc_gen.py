@@ -1,13 +1,24 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import networkx as nx
 
 import sys, os
 sys.path.append('../')
 
-# from https://rosettacode.org/wiki/Abelian_sandpile_model#Python
-# this file just simulates the sandpile, no analysis
+"""
+Simulate SOC sandpile
+From https://rosettacode.org/wiki/Abelian_sandpile_model#Python
+TODO: saving spiking indices more efficient
+TODO (Theory):
+- adding grains at time intervals and random points, like external or internal inputs
+- allow sand to overflow (get continuous oscillations that way)
+    - Vs allowing resonance on walls (what does this say about inputs/outputs?)
+- Or more simply what about just having sources and sinks
+    - Also random initial conditions as in BTW
+- What about refractory states?
+
+"""
+
 class AbelianSandpile:
     def __init__(self, size, ic, snn = False):
         """
@@ -120,4 +131,4 @@ while hold:
     else:
         continue
 
-np.save('../data/experiments/sim/SOC_spikes', raster) 
+np.save('../data/experiments/sim/SOC_spikes', raster)

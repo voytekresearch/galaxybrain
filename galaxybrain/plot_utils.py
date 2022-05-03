@@ -5,6 +5,8 @@ import seaborn as sb
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
 import os
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning) # for tight_layout() incompatibility with ax object
 
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,42 +76,46 @@ def silent_plot(fx, fx_args, fn):
 ### Analysis functions ###
 ##########################
 
-def corr_plot(corr_data, kind, subsetsizes, p_data=None):
-    """if given p_data, annotates point of p>0.05 with a '*' """
-    n_trials = corr_data.shape[0]
+def corr_plot(corr, kind, subsetsizes, p_vals=None):
+    """if given p_vals, annotates point of p>0.05 with a '*' """
+    n_trials = corr.shape[0]
     label_map = {'Pearson':'r','Spearman':'ρ'}
-    corr_data = np.array([corr_data[i] for i in range(n_trials)], dtype=float)
-    plt.errorbar(subsetsizes, corr_data.mean(0), corr_data.std(0), color='blue', alpha=0.5)
-    plt.plot(subsetsizes, corr_data.T, 'bo', alpha=0.5)
+    corr = np.array([corr[i] for i in range(n_trials)], dtype=float)
+    plt.errorbar(subsetsizes, corr.mean(0), corr.std(0), color='blue', alpha=0.5)
+    plt.plot(subsetsizes, corr.T, 'bo', alpha=0.5)
     #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
     pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'Subset Size', f'{label_map[kind]}')
-    if p_data.any(): # .any() because array
-        x_offset = subsetsizes[-1] * .03 # tried and true
-        for x, y, p in zip(subsetsizes, corr_data.mean(0), p_data.mean(0)):
+    if p_vals.any(): # .any() because array
+        x_off = max(subsetsizes)  * .03 # tried and true
+        y_off = max(corr.mean(0)) * .1 # doesn't work as well?
+        for x, y, p in zip(subsetsizes, corr.mean(0), p_vals.mean(0)):
             if p >= 0.05:
-                plt.annotate('*', (x-x_offset,y), size=30)
+                plt.annotate('*', (x-x_off, y-y_off), size=30)
 
 
-def p_plot(p_data, kind, subsetsizes):
-    n_trials = p_data.shape[0]
-    p_data = np.log10(np.array([p_data[i] for i in range(n_trials)], dtype=float))
-    plt.errorbar(subsetsizes, p_data.mean(0), p_data.std(0), color='green', alpha=0.5)
-    plt.plot(subsetsizes, p_data.T, 'go', alpha=0.5)
+def p_plot(p_vals, kind, subsetsizes):
+    n_trials = p_vals.shape[0]
+    p_vals = np.log10(np.array([p_vals[i] for i in range(n_trials)], dtype=float))
+    plt.errorbar(subsetsizes, p_vals.mean(0), p_vals.std(0), color='green', alpha=0.5)
+    plt.plot(subsetsizes, p_vals.T, 'go', alpha=0.5)
     plt.axhline(np.log10(0.05), linestyle='--', color='orange', lw=2, alpha=0.75, label='p = 0.05')
     plt.legend()
-    #plt.semilogy(subsetsizes, p_data, color = 'green', alpha = 0.5)
+    #plt.semilogy(subsetsizes, p_vals, color = 'green', alpha = 0.5)
     # plt.yscale('log')
     pltlabel(f'{kind} p value as function of subset size', 'Subset Size', '$log_{10}p$')
 
 
-def goodness_of_fit_plot(subsetsizes, data, spec):
-    """spec in: ['pca_er', 'ft_er1', 'ft_er2']"""
-    if 'pca' in spec:
+def goodness_of_fit_plot(subsetsizes, data, spec_er):
+    """
+    spec_er in: ['pca_er', 'ft_er1', 'ft_er2']
+    TODO: make violin plot
+    """
+    if 'pca' in spec_er:
         title_spec = 'eigenspectrum'
     else:
         title_spec = 'power spectrum'
-    plt.plot(subsetsizes[:], data[spec].T[:], ".", color='purple', lw=1, alpha=0.2)
-    pltlabel(f'Fit error for {title_spec} \n at subset size', 'Subset Size', 'error')
+    plt.plot(subsetsizes[:], data[spec_er].T[:], ".", color='purple', lw=1, alpha=0.2)
+    pltlabel(f'Fit error for {title_spec} \n at subset size', 'Subset Size', 'error (MAE)')
 
 
 def exp_plot(data, key, kind='violin', meta=None):
@@ -118,12 +124,13 @@ def exp_plot(data, key, kind='violin', meta=None):
     data : data dictionary of standard format
     key  : str in ('pca_m', 'ft_m1', 'ft_m2') 
     kind : str in ('violin', 'hist', 'errorbar')
-
+    # TODO (maybe) fill-between plot type
     *Note: originally done with kind == 'errorbar'
     """
     colors = list(iter(plt.cm.cool(np.linspace(0, 1, 16))))
     if kind == 'violin':
-        sb.violinplot(data=data[key], palette=colors, linewidth=0.3)
+        ax = sb.violinplot(data=data[key], palette=colors, linewidth=0.3, cut=0, inner='box')
+        plt.xticks([]) # no xticks necessary because of colorbar
     elif kind == 'hist':
         for e in data[key].T:
             plt.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
@@ -167,7 +174,7 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
         logaxes()
-        pltlabel('Eigenvalue Spectrum', 'PC dimension', 'Variance')
+        pltlabel('log Eigenvalue Spectrum', 'PC dimension', 'Variance')
         
         # PSD
         plt.subplot(2,2,3)
@@ -175,23 +182,21 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0))
         plt.plot(np.arange(0,61/120, 1/120), mean_pows)
         logaxes()
-        pltlabel('Power Spectrum', 'Frequency (Hz)', 'Power')
-
+        pltlabel('log Power Spectrum', 'Frequency (Hz)', 'Power')
     
     
     #Space dimension slopes
     plt.subplot(2,2,2)
     exp_plot(data, 'pca_m')
-    pltlabel('Eigenvalue spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
+    pltlabel('Eigenvalue spectrum exponent \n at each subset size', '', 'Exponent')
 
     #Time dimension slopes (SUMMED)
     plt.subplot(2,2,4)
     exp_plot(data, 'ft_m1')
-    pltlabel('Power spectrum exponent \n at each subset size', 'Subset Size', 'Exponent')
+    pltlabel('Power spectrum exponent \n at each subset size', '', 'Exponent')
 
     # colorbar
-    # plt.subplot(3,2,5) #.set_position([40,40, 30, 30])
-    cax = fig.add_axes([1.05,0.3,0.02,0.35])
+    cax = fig.add_axes([1, 0.3, 0.02, 0.35])
     hexes = [mpl.colors.rgb2hex(c) for c in cmap] # VERY hacky way of getting hex values of cmap cool
     solo_colorbar([hexes[0], hexes[-1]], subset_fractions, 'fraction of neurons', orientation='vertical', cax=cax)
 
