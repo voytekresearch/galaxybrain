@@ -23,7 +23,7 @@ class SummaryPlots:
     def mouse_region_iterator(self, plot_type, verbose, spec = None, CKEYS = None, marker = None):
         """
         Iterates through mouse-region pairs to extract relevant statistics.  For certain plots does some of the plotting.
-        plot_type: either 'heat map', 'all corr', bar_plot' or 'avg pca exp'
+        plot_type: either 'heat map', 'line_corr', bar_plot' or 'avg pca exp'
         CKEYS, marker are specific plotting vars (for 'avg pca exp')
         """
         debug = []
@@ -74,15 +74,8 @@ class SummaryPlots:
                 psn_p = np.array([psn_p[i] for i in range(n_trials)], dtype=float)
                 spn_p = np.array([spn_p[i] for i in range(n_trials)], dtype=float)
     
-                if plot_type == "bar_plot":
-                    #n_trials = psn_r.shape[0]
-                    sig_bool = self.array_sig(psn_p.mean(0)) or self.array_sig(spn_p.mean(0))
-                    debug.append((mouse_key, region_name, sig_bool))
-                    #corr_df[mouse_df_key][region_name] = np.mean([np.nanmean(decomp_arr[:,2].mean(0)), np.nanmean(decomp_arr[:,3].mean(0))]) #avg of avg of the 2 correlations for that region
-            
-                    self.corr_df[mouse_df_key][region_name] = np.mean([np.nanmean(psn_r.mean(0)), np.nanmean(spn_r[:,3].mean(0))]) #avg of avg of the 2 correlations for that region
                 
-                elif plot_type == 'all corr':
+                if plot_type == 'line_corr':
                     #try looking at spearman as well
                     plt.subplot(1,3,i_m+1)
                     #plt.plot(fractions, psn_r.mean(0), marker[i_m]+'-', ms=10, color=CKEYS[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
@@ -126,7 +119,7 @@ class SummaryPlots:
         CKEYS.append('#000000')
         plt.figure(figsize=(20,5))
 
-        self.mouse_region_iterator(plot_type = 'all corr', verbose = verbose, CKEYS = CKEYS)
+        self.mouse_region_iterator(plot_type = 'line_corr', verbose = verbose, CKEYS = CKEYS)
         for i_r, r in enumerate(self.all_regions):
                 plt.plot(1,1/16,color=CKEYS[i_r], label=r)
         plt.legend(bbox_to_anchor=(1.05, 1))

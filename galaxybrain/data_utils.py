@@ -19,7 +19,7 @@ matplotlib.rc('figure', max_open_warning = 0)
 MICE_META   = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
                'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
                'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
-ALL_REGIONS = {k2 for v1 in MICE_META.values() for k2 in v1}
+ALL_REGIONS = list({k2 for v1 in MICE_META.values() for k2 in v1}) # list to use indices later
 
 
 def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smooth_param=[0.2, 0.025]):

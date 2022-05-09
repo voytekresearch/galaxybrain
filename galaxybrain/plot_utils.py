@@ -219,9 +219,11 @@ def _array_sig(data):
 
 
 def avg_corr_bar(data, mice=MICE_META.keys()):
-    """data: data_dict
+    """
+    data: data_dict
     TODO: significance stars for sigbool
-    NOTE: x axis plots differently upon import due to ALL_REGIONS being a set"""
+    NOTE: x axis plots differently upon import due to ALL_REGIONS being a set
+    """
     corr_df = pd.DataFrame(index=ALL_REGIONS, columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
     # populate corr_df
     for m in mice:
@@ -244,4 +246,34 @@ def avg_corr_bar(data, mice=MICE_META.keys()):
     plt.title('Average Inter-spectral Correlation')
 
 
-# def 
+def all_corr_plot(data, mice=MICE_META.keys()):
+    """
+    TODO: make it start at x=0
+    """
+    fractions = np.linspace(.0625,1,16)
+    ckeys = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    ckeys.append('#000000')
+
+    fig = plt.figure(figsize=(13,4))
+
+    for i_m, m in enumerate(mice):
+        for r in data[m]:
+            d = data[m][r]['data']
+            plt.subplot(1,3,i_m+1)
+            #plt.plot(fractions, psn_r.mean(0), marker[i_m]+'-', ms=10, color=ckeys[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
+            plt.plot(fractions, d['pearson_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3)
+            plt.title('Pearson\'s r (Mouse {})'.format(i_m+1))
+            plt.xlim([.0625,1])
+            plt.xlabel('Fraction of neurons'); plt.ylabel('r')
+
+    # hack for all legend labels
+    for i_r, r in enumerate(ALL_REGIONS):
+        plt.plot(1,1/16,color=ckeys[i_r], label=r)
+
+    # sort both labels and handles alpha
+    handles, labels = plt.gca().get_legend_handles_labels()
+    labels, handles = zip(*sorted(zip(labels, handles), reverse=True))
+    plt.legend(handles, labels, bbox_to_anchor=(1.1, 1.2)) # (x, y)
+    plt.tight_layout()
+
+
