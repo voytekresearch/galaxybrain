@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 import seaborn as sb
+import matplotlib as mpl 
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
 import pandas as pd
@@ -206,6 +207,7 @@ def plot_all_measures(data, meta):
 ## Analysis summary plots ##
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
 from data_utils import MICE_META, ALL_REGIONS
+FRACTIONS = np.linspace(.0625,1,16)
 
 
 def _array_sig(data):
@@ -246,11 +248,11 @@ def avg_corr_bar(data, mice=MICE_META.keys()):
     plt.title('Average Inter-spectral Correlation')
 
 
-def all_corr_plot(data, mice=MICE_META.keys()):
+def all_corr_plot(data, mice=MICE_META.keys(), corr_type='pearson'):
     """
+    1 x n_mice line plot of correlation over subsets
     TODO: make it start at x=0
     """
-    fractions = np.linspace(.0625,1,16)
     ckeys = plt.rcParams['axes.prop_cycle'].by_key()['color']
     ckeys.append('#000000')
 
@@ -260,8 +262,8 @@ def all_corr_plot(data, mice=MICE_META.keys()):
         for r in data[m]:
             d = data[m][r]['data']
             plt.subplot(1,3,i_m+1)
-            #plt.plot(fractions, psn_r.mean(0), marker[i_m]+'-', ms=10, color=ckeys[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
-            plt.plot(fractions, d['pearson_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3)
+            #plt.plot(FRACTIONS, psn_r.mean(0), marker[i_m]+'-', ms=10, color=ckeys[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
+            plt.plot(FRACTIONS, d[f'{corr_type}_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3)
             plt.title('Pearson\'s r (Mouse {})'.format(i_m+1))
             plt.xlim([.0625,1])
             plt.xlabel('Fraction of neurons'); plt.ylabel('r')
@@ -275,5 +277,29 @@ def all_corr_plot(data, mice=MICE_META.keys()):
     labels, handles = zip(*sorted(zip(labels, handles), reverse=True))
     plt.legend(handles, labels, bbox_to_anchor=(1.1, 1.2)) # (x, y)
     plt.tight_layout()
+
+
+def corr_heat_map(data, mice=MICE_META.keys(), corr_type='pearson'):
+    heat_maps = [pd.DataFrame(index=ALL_REGIONS, columns=FRACTIONS) for i in range(len(mice))]
+    for i_m, m in enumerate(mice):
+        for r in data[m]:
+            d = data[m][r]['data']
+            for i_f, f in enumerate(FRACTIONS):
+                heat_maps[i_m][f][r] = d[f'{corr_type}_corr'].mean(0)[i_f]
+
+
+    plt.figure(figsize=(20,5))
+    for i_m, mouse_key in enumerate(mice):
+        plt.subplot(1,3,i_m+1)
+        h_map = heat_maps[i_m]
+        cmap = mpl.cm.bwr.set_bad(color='#ababab')
+        im = plt.imshow(h_map.fillna(np.nan), 'bwr', extent=[.0625,1,-1,1], aspect='auto')
+        plt.xlabel('Fraction of neurons', fontsize=20)
+        # NOTE: used to be linspace to 12? 
+        plt.yticks(ticks=np.linspace(-1,1,11), verticalalignment='baseline', labels=np.flip(h_map.index), fontsize=16)
+        plt.title('Mouse {}'.format(i_m + 1), fontsize=20)
+        plt.colorbar(im,fraction=0.046, pad=0.04)
+            
+        plt.tight_layout()
 
 

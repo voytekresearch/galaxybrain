@@ -75,17 +75,7 @@ class SummaryPlots:
                 spn_p = np.array([spn_p[i] for i in range(n_trials)], dtype=float)
     
                 
-                if plot_type == 'line_corr':
-                    #try looking at spearman as well
-                    plt.subplot(1,3,i_m+1)
-                    #plt.plot(fractions, psn_r.mean(0), marker[i_m]+'-', ms=10, color=CKEYS[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
-                    plt.plot(fractions, psn_r.mean(0), color=CKEYS[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5, lw = 3)
-                    plt.title('Pearson\'s r as function of subset size (Mouse {})'.format(i_m+1))
-                    plt.xlim([0,1])
-                    plt.xlabel('Fraction of neurons'); plt.ylabel('r')
-                
-                elif plot_type == 'heat map':
-                    psn_r = np.array([psn_r[i] for i in range(n_trials)], dtype=float)
+                if plot_type == 'heat map':
                     #for heat map
                     for i_f, f in enumerate(fractions):
                         self.mouse_heat_maps[i_m][f][region_name] = psn_r.mean(0)[i_f]
@@ -98,53 +88,7 @@ class SummaryPlots:
             #         plt.plot(subset_sizes, decomp_arr.mean(0)[i_feat].mean(0)/decomp_arr.mean(0)[i_feat].mean(0)[0], marker[i_m]+'-', ms=10, color=CKEYS[np.where(all_regions==region[0])[0][0]])
             #         plt.plot(subset_sizes, decomp_arr.mean(0)[3], marker[i_m]+'-', ms=10, color=CKEYS[np.where(all_regions==region[0])[0][0]])
                     plt.xscale('log');#plt.yscale('log')
-        
 
-    def bar_plot(self, save = False, verbose = False):
-        """Bar plot displaying average correlation"""
-        self.mouse_region_iterator(plot_type = 'bar_plot', verbose = verbose)
-        
-        self.corr_df.plot.bar(rot=0, figsize=(10,10), color = ['#FFABAB','#C5A3FF', '#85E3FF'])
-        plt.tick_params(axis = "x", which = "both", bottom = False)
-        plt.xticks(rotation=-45, horizontalalignment='left', fontsize=16)
-        for xc in np.arange(.5,10.5,1): #[.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5]
-            plt.axvline(x=xc, color='k', linestyle='-', alpha = 0.5, linewidth=.3)
-        #plt.axhline(y=0, color='k', linewidth=.2)
-        plt.title('Average Inter-spectral Correlation')
-            
-
-    def line_corr(self, save = False, verbose = False):
-        """1x3 plot of all correlations"""
-        CKEYS = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        CKEYS.append('#000000')
-        plt.figure(figsize=(20,5))
-
-        self.mouse_region_iterator(plot_type = 'line_corr', verbose = verbose, CKEYS = CKEYS)
-        for i_r, r in enumerate(self.all_regions):
-                plt.plot(1,1/16,color=CKEYS[i_r], label=r)
-        plt.legend(bbox_to_anchor=(1.05, 1))
-        plt.tight_layout()
-        
-
-    def corr_heat_map(self, save = False, verbose = False):
-        """1x3 heatmap"""
-        self.mouse_region_iterator(plot_type = 'heat map', verbose = verbose)
-        
-        #fig, (ax1, ax2, ax3) = plt.subplots(1,3)
-        plt.figure(figsize=(20,5))
-        for i_m, mouse_key in enumerate(['krebs', 'robbins', 'waksman']):
-            plt.subplot(1,3,i_m+1)
-            h_map = self.mouse_heat_maps[i_m]
-            cmap = matplotlib.cm.bwr
-            cmap.set_bad(color='#ababab')
-            im = plt.imshow(h_map.fillna(np.nan), 'bwr', extent = [.0625,1,-1,1], aspect='auto')
-            plt.xlabel('Fraction of neurons', fontsize = 20)
-            
-            plt.yticks(ticks = np.linspace(-1,1,12), verticalalignment='baseline', labels = np.flip(h_map.index), fontsize=16)
-            plt.title('Mouse {}'.format(i_m + 1), fontsize = 20)
-            plt.colorbar(im,fraction=0.046, pad=0.04)
-            
-        plt.tight_layout()
 
 
     def avg_exp(self, spec, save = False, verbose = False):
