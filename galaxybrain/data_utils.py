@@ -8,7 +8,6 @@ import re
 sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-from plot_utils import silent_plot, plot_all_measures
 
 import warnings
 import matplotlib.cbook
@@ -17,9 +16,10 @@ matplotlib.rc('figure', max_open_warning = 0)
 
 
 # region : size
-MICE_REGIONS = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
-                'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
-                'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
+MICE_META   = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
+               'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
+               'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
+ALL_REGIONS = {k2 for v1 in MICE_META.values() for k2 in v1}
 
 
 def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smooth_param=[0.2, 0.025]):
@@ -134,11 +134,8 @@ def spike_dict(mice_ix=range(3)):
     
     datafolder = '../data/spikes/'
 
-    region_sizes = ( [('all', 1462), ('CP', 176), ('HPF', 265), ('LS', 122), ('MB', 127), ('TH', 227), ('V1', 334)], #krebs
-                     [('all', 2688), ('FrMoCtx', 647), ('HPF', 333), ('LS', 133), ('RSP', 112), ('SomMoCtx', 220), ('TH', 638), ('V1', 251), ('V2', 124)], #robbins
-                     [('all', 2296), ('CP', 134), ('HPF', 155), ('TH', 1878)] ) #waksman
     raster_dict = {}
-    for i_m, name in zip(mice_ix, ('krebs', 'robbins','waksman')):
+    for i_m, name in zip(mice_ix, MICE_META):
         print(f'Mouse {i_m+1}')
         df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
         region_indices = {}
@@ -148,23 +145,24 @@ def spike_dict(mice_ix=range(3)):
         spk_list, region_labels = return_pops(df_spk, df_info)
         print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
         su_start_ind = len(region_labels)+1
-        raster_dict[name] = ( (df_spk[df_spk.columns[su_start_ind:]], region_indices), region_sizes[i_m] )
+        raster_dict[name] = ( (df_spk[df_spk.columns[su_start_ind:]], region_indices), MICE_META[name] )
 
     return raster_dict
 
 
 def mouse_iter(raster_dict, mouse_key, burn_in):
     """Yields mouse spikes in an oft used loop"""
-    mouse = raster_dict[mouse_key][0]
-    for region in raster_dict[mouse_key][1]:
-        region_name, region_count = region[0], region[1]
-        print(region_name)
-        if region_name == 'all':
-            mouse_raster = mouse[0].iloc[burn_in:-burn_in]
+    mouse_spk     = raster_dict[mouse_key][0] # DF
+    region_counts = raster_dict[mouse_key][1] # dict like {'TH': 123, ... }
+    for rn in region_counts:
+        rc = region_counts[rn]
+        print(rn)
+        if rn == 'all':
+            mouse_raster = mouse_spk[0].iloc[burn_in:-burn_in]
         else:
-            mouse_raster = mouse[0][mouse[1][region_name]].iloc[burn_in:-burn_in]
+            mouse_raster = mouse_spk[0][mouse_spk[1][rn]].iloc[burn_in:-burn_in]
             
-        yield np.array(mouse_raster), region_name, region_count
+        yield np.array(mouse_raster), rn, rc
 
 #####################################
 ### Analysis result data handling ###
@@ -206,14 +204,20 @@ def load_npz(file, kind, decomp_dict=None, one_time=False):
             decomp_dict[k].append(data[k])
         return decomp_dict
 
+    # no circular import
+from plot_utils import silent_plot, plot_all_measures
 
 def load_results(dir_, kind='mouse', plot='', analysis_args=None):
-    '''
+    """
     loads, [optionally] plots analysis results
-    return of data dictionary currently not implemented
     dir_ : dir of data
     only plots if directory of figures given
-    '''
+
+    returns data dictionary of form:
+    {'mouse' : {'region' : {'meta' : {'count':int, 'subsetsizes':array},
+                            'data' : {'pca_m':array, ...} }
+                } }
+    """
     
     def format_data(f_prefix):
         """oft used pattern"""
@@ -253,7 +257,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     if 'mouse' in kind: #"mouse" or "mouse_old"
         for mouse in analysis_args['mouse_in']:
             data_dict[mouse] = {}
-            for region, count in MICE_REGIONS[mouse].items():
+            for region, count in MICE_META[mouse].items():
                 subset_sizes = np.linspace(30, count, 16, dtype=int)
                 meta = {'count':count, 'subsetsizes':subset_sizes}
                 data = format_data(f'{dir_}/{mouse}/{region}')

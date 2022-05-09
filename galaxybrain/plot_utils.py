@@ -4,13 +4,11 @@ import matplotlib as mpl
 import seaborn as sb
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
+import pandas as pd
 import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) # for tight_layout() incompatibility with ax object
-
-
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-
 ########################
 ### Helper functions ###
 ########################
@@ -202,3 +200,48 @@ def plot_all_measures(data, meta):
 
     plt.tight_layout()
     plt.draw()
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
+## Analysis summary plots ##
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
+from data_utils import MICE_META, ALL_REGIONS
+
+
+def _array_sig(data):
+    """ 
+    Compute if 50% of p values are <= 0.05
+    i.e., if a specific mouse region is significantly correlated
+    returns bool
+    """
+    bools = data <= 0.05
+    return len([1 for i in bools if i == True]) >= 0.5*len(data)
+
+
+def avg_corr_bar(data, mice=MICE_META.keys()):
+    """data: data_dict
+    TODO: significance stars for sigbool
+    NOTE: x axis plots differently upon import due to ALL_REGIONS being a set"""
+    corr_df = pd.DataFrame(index=ALL_REGIONS, columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
+    # populate corr_df
+    for m in mice:
+        for r in data[m]:
+            d = data[m][r]['data']
+            mu_psn_r, mu_psn_p,\
+            mu_spn_r, mu_spn_p = [d[k].mean(0) for k in ('pearson_corr', 'pearson_p',
+                                                        'spearman_corr', 'spearman_p')]
+            sig_bool = _array_sig(mu_psn_p) or _array_sig(mu_spn_p)
+            ## might want to avg across one type of corr only
+            corr_df[m][r] = np.mean([np.nanmean(mu_psn_r), 
+                                    np.nanmean(mu_spn_r)]) #avg of avg of the 2 correlations for that region
+
+    # bar plot        
+    corr_df.plot.bar(rot=0, color=['#FFABAB','#C5A3FF', '#85E3FF'])
+    plt.tick_params(axis="x", which="both", bottom=False)
+    plt.xticks(rotation=-45, horizontalalignment='left', fontsize=16)
+    for xc in np.arange(.5,10.5,1):
+        plt.axvline(x=xc, color='k', linestyle='-', alpha = 0.5, linewidth=.3)
+    plt.title('Average Inter-spectral Correlation')
+
+
+# def 
