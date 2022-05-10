@@ -180,17 +180,17 @@ def load_npz(file, kind, decomp_dict=None, one_time=False):
 
     if kind == 'mouse':
         # these are keys that are sliced over trials
-        iter_keys      = ['pca_m', 'ft_m1', 'ft_m2', 'pearson_r1', 'spearman_rho1', 
+        iter_keys     = ['pca_m', 'ft_m1', 'ft_m2', 'pearson_r1', 'spearman_rho1', 
                          'pearson_p1', 'spearman_p1', 'pearson_r2', 'spearman_rho2', 
                          'pearson_p2', 'spearman_p2', 'pca_b', 'ft_b1', 'ft_b2'] 
         one_time_keys = ['eigs', 'pows', 'pca_er', 'pca_b', 'ft_er1', 'ft_b1', 'ft_er2', 'ft_b2']
 
     elif kind == 'mouse_old': # "old" data format with different field names 
-        iter_keys      = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p'] # in the past r2 went into here??
+        iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p'] # in the past r2 went into here??
         one_time_keys = ['eigs', 'pows', 'space_r2', 'time_r2']
 
     elif kind in ('sim', 'noise'):
-        iter_keys      = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p']
+        iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p']
         one_time_keys = ['eigs', 'pows', 'space_er', 'time_er']
 
     with np.load(file, allow_pickle=True) as data:
@@ -220,7 +220,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     """
     
     def format_data(f_prefix):
-        """oft used pattern"""
+        """reshape/average certain data across trials, rename keys"""
         decomp_dict = {}
         for i in range(n_loop):
             fn = f'{f_prefix}/ramsey_{i+1}.npz'  # might be simpler to save just one file
@@ -232,7 +232,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
             if '_m' in k: 
                 decomp_dict[k] = decomp_dict[k].mean(0)
             ## str substitution for more pragmatic label (TODO: rename it in data files instead)
-            if '_r' in k:
+            if '_r' in k: # 'r' or 'rho'
                 ix = k.index('_') + 1
                 try: # get number '1' or '2' from key string
                     k_new = k[:ix] + 'corr' + re.search('\d+', k)[0]

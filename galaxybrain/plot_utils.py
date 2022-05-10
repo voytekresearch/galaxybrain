@@ -1,8 +1,12 @@
+"""
+NOTE:  nans in the correlations because once you are sampling entire population it should be nan
+"""
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 import seaborn as sb
-import matplotlib as mpl 
 from matplotlib.colors import LinearSegmentedColormap
 import cycler
 import pandas as pd
@@ -208,7 +212,7 @@ def plot_all_measures(data, meta):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
 from data_utils import MICE_META, ALL_REGIONS
 FRACTIONS = np.linspace(.0625,1,16)
-
+MARKERS   = 'o*^' # one for each mouse
 
 def _array_sig(data):
     """ 
@@ -220,10 +224,24 @@ def _array_sig(data):
     return len([1 for i in bools if i == True]) >= 0.5*len(data)
 
 
+def _ckeys():
+    ckeys = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    ckeys.append('#000000')
+    return ckeys
+
+
+def _sorted_lgnd(xy=(1,1)):
+    handles, labels = plt.gca().get_legend_handles_labels()
+    labels, handles = zip(*sorted(zip(labels, handles), reverse=True))
+    plt.legend(handles, labels, bbox_to_anchor=xy) # (x, y)
+
 def avg_corr_bar(data, mice=MICE_META.keys()):
     """
     data: data_dict
     TODO: significance stars for sigbool
+    https://stackoverflow.com/questions/40489821/how-to-write-text-above-the-bars-on-a-bar-plot-python/40491960
+    https://matplotlib.org/3.3.2/gallery/lines_bars_and_markers/barchart.html#sphx-glr-gallery-lines-bars-and-markers-barchart-py
+    https://matplotlib.org/examples/api/barchart_demo.html
     NOTE: x axis plots differently upon import due to ALL_REGIONS being a set
     """
     corr_df = pd.DataFrame(index=ALL_REGIONS, columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
@@ -262,8 +280,7 @@ def all_corr_plot(data, mice=MICE_META.keys(), corr_type='pearson'):
         for r in data[m]:
             d = data[m][r]['data']
             plt.subplot(1,3,i_m+1)
-            #plt.plot(FRACTIONS, psn_r.mean(0), marker[i_m]+'-', ms=10, color=ckeys[np.where(self.all_regions==region[0])[0][0]], alpha = 0.5)
-            plt.plot(FRACTIONS, d[f'{corr_type}_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3)
+            plt.plot(FRACTIONS, d[f'{corr_type}_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3) # marker[i_m]+'-', ms=10
             plt.title('Pearson\'s r (Mouse {})'.format(i_m+1))
             plt.xlim([.0625,1])
             plt.xlabel('Fraction of neurons'); plt.ylabel('r')
@@ -273,13 +290,12 @@ def all_corr_plot(data, mice=MICE_META.keys(), corr_type='pearson'):
         plt.plot(1,1/16,color=ckeys[i_r], label=r)
 
     # sort both labels and handles alpha
-    handles, labels = plt.gca().get_legend_handles_labels()
-    labels, handles = zip(*sorted(zip(labels, handles), reverse=True))
-    plt.legend(handles, labels, bbox_to_anchor=(1.1, 1.2)) # (x, y)
+    _sorted_lgnd(xy=(1.1,1.2))
     plt.tight_layout()
 
 
 def corr_heat_map(data, mice=MICE_META.keys(), corr_type='pearson'):
+    """Nx1 heat map"""
     heat_maps = [pd.DataFrame(index=ALL_REGIONS, columns=FRACTIONS) for i in range(len(mice))]
     for i_m, m in enumerate(mice):
         for r in data[m]:
@@ -287,19 +303,95 @@ def corr_heat_map(data, mice=MICE_META.keys(), corr_type='pearson'):
             for i_f, f in enumerate(FRACTIONS):
                 heat_maps[i_m][f][r] = d[f'{corr_type}_corr'].mean(0)[i_f]
 
-
-    plt.figure(figsize=(20,5))
-    for i_m, mouse_key in enumerate(mice):
+    plt.figure(figsize=(15,4))
+    for i_m in range(len(mice)):
         plt.subplot(1,3,i_m+1)
         h_map = heat_maps[i_m]
         cmap = mpl.cm.bwr.set_bad(color='#ababab')
         im = plt.imshow(h_map.fillna(np.nan), 'bwr', extent=[.0625,1,-1,1], aspect='auto')
-        plt.xlabel('Fraction of neurons', fontsize=20)
+        plt.xlabel('Fraction of neurons')
         # NOTE: used to be linspace to 12? 
         plt.yticks(ticks=np.linspace(-1,1,11), verticalalignment='baseline', labels=np.flip(h_map.index), fontsize=16)
-        plt.title('Mouse {}'.format(i_m + 1), fontsize=20)
+        plt.title('Mouse {}'.format(i_m + 1))
         plt.colorbar(im,fraction=0.046, pad=0.04)
             
         plt.tight_layout()
 
 
+def avg_exp_plot(data, mice=MICE_META.keys()):
+    """
+    data : data_dict
+    """
+    title_lu = {'pca_m':'ES exponent', 'ft_m':'PSD exponent'}
+    ckeys = _ckeys()
+    fig = plt.figure(figsize=(9,4))
+    for i, m in enumerate(mice):
+        for r in data[m]:
+            d = data[m][r]['data']
+            for pi, exp in enumerate(['pca_m', 'ft_m']):
+                plt.subplot(1,2,pi+1)
+                plt.plot(FRACTIONS, d[exp].mean(0), MARKERS[i]+'-', ms=10, color=ckeys[ALL_REGIONS.index(r)])
+                plt.xscale('log')
+                plt.ylabel(title_lu[exp])
+                if exp == 'ft_m': # TODO: shouldn't have to do this manually
+                    plt.ylim([-.023,-0.006])
+    
+    for i_r, r in enumerate(ALL_REGIONS):
+        plt.plot(0,1,color=ckeys[i_r], label=r)
+
+    fig.supxlabel('fraction of neurons', x=.45, y=.1)
+    _sorted_lgnd(xy=(1,1.1))
+    plt.tight_layout()
+        
+
+~~~~~~~~~~~~~~~~~~~0
+# Ising Model Plots 
+~~~~~~~~~~~~~~~~~~~0
+
+TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r/cold to hot
+
+
+def plot_ising_spectra(data, spec, temps='all', subset_ix=15):
+    """plot spectra over temps given
+    spec        : 'eigs' or 'pows'
+    temps       : list of str temps or 'all'
+    subset_ix : index in range [0, 16) """
+    if temps == 'all':
+        temps = [k for k in data if k != 'meta']
+
+    data = {k : data[k] for k in temps} # filter
+    colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
+    plt.figure(figsize=(4,4))
+    for i, t in enumerate(data):
+        # conditionals for plot
+        lw    =  4  if t=='2.27' else 2
+        alpha =  1  if t=='2.27' else 0.9
+        color = 'k' if t=='2.27' else colors[i]
+        plt.plot(data[t]['data'][spec][subset_ix], color=color, lw=lw, alpha=alpha)
+        logaxes()
+
+
+def line_corr(corr_mat, temps, x_axis='fraction'):
+    if x_axis == 'fraction':
+        colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
+        for c, t, i in zip(corr_mat, temps, range(len(temps))):
+            lw    =  4  if t == 2.27 else 2
+            alpha =  1  if t == 2.27 else 0.9
+            color = 'k' if t == 2.27 else colors[i]
+            plt.plot(np.linspace(0, 1, 16), c, color=color, lw=lw, alpha=alpha)
+        pltlabel('', 'fraction of spins', 'correlation')
+        cmap, norm = mpl.colors.from_levels_and_colors(temps, colors[1:] ) # weird indexing offset by 1
+        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, label='temperature')
+    
+    elif x_axis == 'temp':
+        crange = ['k', '#22c916']
+        colors = colorcycler(crange, len(corr_mat.T), False)
+        for c, i in zip(corr_mat.T, range(16)):
+                plt.plot(temps, c, color=colors[i], label=i)
+        pltlabel('', 'temperature', 'correlation')
+        plt.vlines(2.27, -0.4, 0.4, color='r', lw=3, zorder=16, linestyles='--')
+        plt.ylim(-0.3, 0.3) # to recalibrate vline offset
+
+        solo_colorbar(crange, np.linspace(0,1,16), 'fraction of spins', 'discrete')
