@@ -351,7 +351,7 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
 ~~~~~~~~~~~~~~~~~~~0
 
 TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r/cold to hot
-
+CRIT_T = f'{2.27:.2f}' # as float
 
 def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     """plot spectra over temps given
@@ -365,9 +365,9 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
     for i, t in enumerate(data):
         # conditionals for plot
-        lw    =  4  if t=='2.27' else 2
-        alpha =  1  if t=='2.27' else 0.9
-        color = 'k' if t=='2.27' else colors[i]
+        lw    =  4  if t==CRIT_T else 2
+        alpha =  1  if t==CRIT_T else 0.9
+        color = 'k' if t==CRIT_T else colors[i]
         try:
             ax.plot(data[t]['data'][spec][subset_ix], color=color, lw=lw, alpha=alpha)
         except:
@@ -375,15 +375,22 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
         logaxes()
 
 
-def line_corr(corr_mat, temps, ax=plt):
+def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
+    """
+    Plot % sampled vs a measure (data_key) over multiple temperatures
+    data_key: data for each temperature 
+    """
+    data = [data[t]['data'][data_key].mean(0) for t in temps]
     colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
-    for c, t, i in zip(corr_mat, temps, range(len(temps))):
-        lw    =  4  if t == 2.27 else 2
-        alpha =  1  if t == 2.27 else 0.9
-        color = 'k' if t == 2.27 else colors[i]
-        ax.plot(np.linspace(0, 1, 16), c, color=color, lw=lw, alpha=alpha)
-    pltlabel('', 'fraction of spins', 'correlation')
-    cmap, norm = mpl.colors.from_levels_and_colors(temps, colors[1:] ) # weird indexing offset by 1
-    sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    plt.colorbar(sm, label='temperature')
+    colors[temps.index(CRIT_T)] = mpl.colors.to_rgba('k')
+    for r, t, c in zip(data, temps, colors):
+        lw    =  4  if t == CRIT_T else 2
+        alpha =  1  if t == CRIT_T else 0.9
+        ax.plot(FRACTIONS, r, color=c, lw=lw, alpha=alpha)
+    plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
+    if colorbar:
+        ftemps = list(map(float, temps)) #need float for colorbar
+        cmap, norm = mpl.colors.from_levels_and_colors(ftemps, colors[1:] ) # weird indexing offset by 1
+        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, label='temperature')
