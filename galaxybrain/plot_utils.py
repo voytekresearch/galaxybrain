@@ -177,7 +177,7 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
         plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
         logaxes()
-        pltlabel('log Eigenvalue Spectrum', 'PC dimension', 'Variance')
+        pltlabel('log ES', 'PC dimension', 'Variance')
         
         # PSD
         plt.subplot(2,2,3)
@@ -185,18 +185,18 @@ def plot_all_measures(data, meta):
         #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0))
         plt.plot(np.arange(0,61/120, 1/120), mean_pows)
         logaxes()
-        pltlabel('log Power Spectrum', 'Frequency (Hz)', 'Power')
+        pltlabel('log PSD', 'Frequency (Hz)', 'Power')
     
     
     #Space dimension slopes
     plt.subplot(2,2,2)
     exp_plot(data, 'pca_m')
-    pltlabel('Eigenvalue spectrum exponent \n at each subset size', '', 'Exponent')
+    pltlabel('ES exponent \n at each subset size', '', 'Exponent')
 
     #Time dimension slopes (SUMMED)
     plt.subplot(2,2,4)
     exp_plot(data, 'ft_m1')
-    pltlabel('Power spectrum exponent \n at each subset size', '', 'Exponent')
+    pltlabel('PSD exponent \n at each subset size', '', 'Exponent')
 
     # colorbar
     cax = fig.add_axes([1, 0.3, 0.02, 0.35])
@@ -205,6 +205,8 @@ def plot_all_measures(data, meta):
 
     plt.tight_layout()
     plt.draw()
+
+    #TODO reset color map
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
@@ -351,7 +353,7 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
 TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r/cold to hot
 
 
-def plot_ising_spectra(data, spec, temps='all', subset_ix=15):
+def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     """plot spectra over temps given
     spec        : 'eigs' or 'pows'
     temps       : list of str temps or 'all'
@@ -361,37 +363,27 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15):
 
     data = {k : data[k] for k in temps} # filter
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
-    plt.figure(figsize=(4,4))
     for i, t in enumerate(data):
         # conditionals for plot
         lw    =  4  if t=='2.27' else 2
         alpha =  1  if t=='2.27' else 0.9
         color = 'k' if t=='2.27' else colors[i]
-        plt.plot(data[t]['data'][spec][subset_ix], color=color, lw=lw, alpha=alpha)
+        try:
+            ax.plot(data[t]['data'][spec][subset_ix], color=color, lw=lw, alpha=alpha)
+        except:
+            print(t, spec, subset_ix)
         logaxes()
 
 
-def line_corr(corr_mat, temps, x_axis='fraction'):
-    if x_axis == 'fraction':
-        colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
-        for c, t, i in zip(corr_mat, temps, range(len(temps))):
-            lw    =  4  if t == 2.27 else 2
-            alpha =  1  if t == 2.27 else 0.9
-            color = 'k' if t == 2.27 else colors[i]
-            plt.plot(np.linspace(0, 1, 16), c, color=color, lw=lw, alpha=alpha)
-        pltlabel('', 'fraction of spins', 'correlation')
-        cmap, norm = mpl.colors.from_levels_and_colors(temps, colors[1:] ) # weird indexing offset by 1
-        sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        plt.colorbar(sm, label='temperature')
-    
-    elif x_axis == 'temp':
-        crange = ['k', '#22c916']
-        colors = colorcycler(crange, len(corr_mat.T), False)
-        for c, i in zip(corr_mat.T, range(16)):
-                plt.plot(temps, c, color=colors[i], label=i)
-        pltlabel('', 'temperature', 'correlation')
-        plt.vlines(2.27, -0.4, 0.4, color='r', lw=3, zorder=16, linestyles='--')
-        plt.ylim(-0.3, 0.3) # to recalibrate vline offset
-
-        solo_colorbar(crange, np.linspace(0,1,16), 'fraction of spins', 'discrete')
+def line_corr(corr_mat, temps, ax=plt):
+    colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
+    for c, t, i in zip(corr_mat, temps, range(len(temps))):
+        lw    =  4  if t == 2.27 else 2
+        alpha =  1  if t == 2.27 else 0.9
+        color = 'k' if t == 2.27 else colors[i]
+        ax.plot(np.linspace(0, 1, 16), c, color=color, lw=lw, alpha=alpha)
+    pltlabel('', 'fraction of spins', 'correlation')
+    cmap, norm = mpl.colors.from_levels_and_colors(temps, colors[1:] ) # weird indexing offset by 1
+    sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    plt.colorbar(sm, label='temperature')
