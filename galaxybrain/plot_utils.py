@@ -78,22 +78,26 @@ def silent_plot(fx, fx_args, fn):
 ##########################
 ### Analysis functions ###
 ##########################
+FRACTIONS = np.linspace(.0625,1,16)
 
-def corr_plot(corr, kind, subsetsizes, p_vals=None):
-    """if given p_vals, annotates point of p>0.05 with a '*' """
+
+def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
+    """if given p_vals, annotates point of p>0.05 with a '*' 
+    xvals used to be subsetsizes"""
     n_trials = corr.shape[0]
     label_map = {'Pearson':'r','Spearman':'ρ'}
     corr = np.array([corr[i] for i in range(n_trials)], dtype=float)
-    plt.errorbar(subsetsizes, corr.mean(0), corr.std(0), color='blue', alpha=0.5)
-    plt.plot(subsetsizes, corr.T, 'bo', alpha=0.5)
-    #plt.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
-    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'Subset Size', f'{label_map[kind]}')
+    ax.errorbar(xvals, corr.mean(0), corr.std(0), color='blue', alpha=0.5)
+    ax.plot(xvals, corr.T, 'bo', alpha=0.5, markersize=8, lw=5)
+    #ax.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
+    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'fraction sampled', f'{label_map[kind]}')
     if p_vals.any(): # .any() because array
-        x_off = max(subsetsizes)  * .03 # tried and true
+        #TODO need to find a better way to scale location of marker
+        x_off = max(xvals)  * .02
         y_off = max(corr.mean(0)) * .1 # doesn't work as well?
-        for x, y, p in zip(subsetsizes, corr.mean(0), p_vals.mean(0)):
+        for x, y, p in zip(xvals, corr.mean(0), p_vals.mean(0)):
             if p >= 0.05:
-                plt.annotate('*', (x-x_off, y-y_off), size=30)
+                ax.annotate('*', (x-x_off, y-y_off), size=60)
 
 
 def p_plot(p_vals, kind, subsetsizes):
@@ -121,7 +125,7 @@ def goodness_of_fit_plot(subsetsizes, data, spec_er):
     pltlabel(f'Fit error for {title_spec} \n at subset size', 'Subset Size', 'error (MAE)')
 
 
-def exp_plot(data, key, kind='violin', meta=None):
+def exp_plot(data, key, kind='violin', meta=None, ax=plt):
     """
     Plot exponent distr over % of neurons
     data : data dictionary of standard format
@@ -133,16 +137,17 @@ def exp_plot(data, key, kind='violin', meta=None):
     colors = list(iter(plt.cm.cool(np.linspace(0, 1, 16))))
     if kind == 'violin':
         ax = sb.violinplot(data=data[key], palette=colors, linewidth=0.3, cut=0, inner='box')
-        plt.xticks([]) # no xticks necessary because of colorbar
+        # ax.xticks([]) # no xticks necessary because of colorbar
+        ax.set_xticks([], minor=False)
     elif kind == 'hist':
         for e in data[key].T:
-            plt.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
+            ax.hist(e,bins=np.arange(0.2,1,0.02),histtype='step', label=f'µ: {e.mean():.2f}\nσ: {e.std():.2f}')
     elif kind == 'errorbar':
         subsetsizes = meta['subsetsizes']
-        plt.errorbar(subsetsizes[1:], data[key].mean(0)[1:], data[key].std(0)[1:], color='black')
+        ax.errorbar(subsetsizes[1:], data[key].mean(0)[1:], data[key].std(0)[1:], color='black')
         
 
-def plot_all_measures(data, meta):
+def plot_all_measures(data, meta, fig=plt.figure(figsize=(8,8))):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
 
@@ -157,8 +162,6 @@ def plot_all_measures(data, meta):
     subset_fractions = np.linspace(0,1,n)
     cmap = plt.cm.cool(subset_fractions)
     plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap)
-
-    fig = plt.figure(figsize=(8,8))
 
     #plot spectra
     for i, n_i in enumerate(subsetsizes):
@@ -213,7 +216,6 @@ def plot_all_measures(data, meta):
 ## Analysis summary plots ##
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
 from data_utils import MICE_META, ALL_REGIONS
-FRACTIONS = np.linspace(.0625,1,16)
 MARKERS   = 'o*^' # one for each mouse
 
 def _array_sig(data):
@@ -236,6 +238,7 @@ def _sorted_lgnd(xy=(1,1)):
     handles, labels = plt.gca().get_legend_handles_labels()
     labels, handles = zip(*sorted(zip(labels, handles), reverse=True))
     plt.legend(handles, labels, bbox_to_anchor=xy) # (x, y)
+
 
 def avg_corr_bar(data, mice=MICE_META.keys()):
     """
@@ -351,7 +354,8 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
 ~~~~~~~~~~~~~~~~~~~0
 
 TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r/cold to hot
-CRIT_T = f'{2.27:.2f}' # as float
+CRIT_T           = f'{2.27:.2f}' # as float
+CRIT_C           = 'k' 
 
 def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     """plot spectra over temps given
@@ -363,13 +367,14 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
 
     data = {k : data[k] for k in temps} # filter
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
-    for i, t in enumerate(data):
+    colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
+    
+    for t, c in zip(data, colors):
         # conditionals for plot
         lw    =  4  if t==CRIT_T else 2
         alpha =  1  if t==CRIT_T else 0.9
-        color = 'k' if t==CRIT_T else colors[i]
         try:
-            ax.plot(data[t]['data'][spec][subset_ix], color=color, lw=lw, alpha=alpha)
+            ax.plot(data[t]['data'][spec][subset_ix], color=c, lw=lw, alpha=alpha)
         except:
             print(t, spec, subset_ix)
         logaxes()
@@ -382,7 +387,7 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     """
     data = [data[t]['data'][data_key].mean(0) for t in temps]
     colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
-    colors[temps.index(CRIT_T)] = mpl.colors.to_rgba('k')
+    colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
     for r, t, c in zip(data, temps, colors):
         lw    =  4  if t == CRIT_T else 2
         alpha =  1  if t == CRIT_T else 0.9
