@@ -12,9 +12,9 @@ def metro_ising(T, runtime, plot=False, N=None, grid=None):
         plot 
     returns array of shape (runtime, N, N)
     """
+    # set constants to 1 so temperature is dimensionless
     J = 1 #strength of interaction (Joules)
-    k = 1 # Joules per kelvin
-    raster = []
+    k = 1 # Joules per kelvin (ie entropy?)
     frames = []
 
     if T == 'critical':
@@ -27,14 +27,14 @@ def metro_ising(T, runtime, plot=False, N=None, grid=None):
     
     for t in range(runtime):
         #sum of interactions at each spin site (vectorized!)
-        interactions = sum([np.roll(grid, shift=(0, 1), axis=1),
+        interactions = sum([np.roll(grid, shift=(0,  1), axis=1),
                             np.roll(grid, shift=(0, -1), axis=1),
-                            np.roll(grid, shift=(1, 0), axis=0), # have to change axis because unlike MATLAB's circshift, np.roll sees shifts (0,1) == (1,0)
+                            np.roll(grid, shift=(1,  0), axis=0), # have to change axis because unlike MATLAB's circshift, np.roll sees shifts (0,1) == (1,0)
                             np.roll(grid, shift=(-1, 0), axis=0)])
-        # change in energy of flipping a spin
+        # Hamiltonian: change in energy of flipping a spin
         DeltaE = 2 * J * (grid * interactions) # element wise multiplication
         # transition probabilities
-        p_trans = np.exp(-DeltaE/(k * T)) # according to the Boltzmann distribution
+        p_trans = np.exp(-DeltaE/(k * T)) # according to the Boltzmann distribution. kT is the "characteristic energy"
         # accepting or rejecting spin flips in one fell swoop!
         #    assigning uniformly distributed values to each site, then checking if they are less than transition prob or less than 0.1?
         transitions = (np.random.random((N,N)) < p_trans ) * (np.random.random((N,N)) < 0.1) * -2 + 1

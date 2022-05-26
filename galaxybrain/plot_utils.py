@@ -2,14 +2,15 @@
 NOTE:  nans in the correlations because once you are sampling entire population it should be nan
 """
 
-
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib as mpl
-import seaborn as sb
-from matplotlib.colors import LinearSegmentedColormap
-import cycler
 import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+from matplotlib.ticker import FormatStrFormatter
+import seaborn as sb
+import cycler
+
 import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) # for tight_layout() incompatibility with ax object
@@ -37,7 +38,7 @@ def rc_style(font_size=14):
 
 
 def colorcycler(color_range, num, default=True):
-    cmap = LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
+    cmap = mpl.colors.LinearSegmentedColormap.from_list('mycmap', color_range)(np.linspace(0, 1, num))
     if default: # hard codes it in kernel
         mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', cmap)
     else:
@@ -146,69 +147,68 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
         subsetsizes = meta['subsetsizes']
         ax.errorbar(subsetsizes[1:], data[key].mean(0)[1:], data[key].std(0)[1:], color='black')
         
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-def plot_all_measures(data, meta, fig=plt.figure(figsize=(8,8))):
+
+def plot_all_measures(data, meta, kind='mouse'):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
-
+    kind: 'mouse' (includes sum + nonsum PSD data), 'mouse_old', or 'sim' (ising)
     plot layout:
-    [ ES  ]  [ subset size vs ES exponent  ]
+    [ ES  ]  [ subset size vs ES exponent  ]   [ correlation ]
     [ PSD ]  [ subset size vs PSD exponent ]
     """
     subsetsizes = meta['subsetsizes']
     n_pc = meta['n_pc']
     n = len(subsetsizes)
-    #stylistic details
+    dsuffix = '1' if kind == 'mouse' else ''
+    ## Plot style
+    fig=plt.figure(figsize=(19,8)) 
     subset_fractions = np.linspace(0,1,n)
     cmap = plt.cm.cool(subset_fractions)
     plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap)
 
-    #plot spectra
-    for i, n_i in enumerate(subsetsizes):
-        mean_evs  = data['eigs'][i]
-        mean_pows = data['pows'][i]
-        if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
-            n_pc_curr = min(subsetsizes)
-        elif isinstance(n_pc, int) and n_pc < n_i:
-            n_pc_curr = n_pc
-        elif isinstance(n_pc, float):
-            n_pc_curr = int(n_pc*n_i)
+    gs = GridSpec(2,3, width_ratios=[1,1,4], wspace=0.8) #
+    gs1 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[:,:2], hspace=.5)
+    gs2 = GridSpecFromSubplotSpec(2, 3, subplot_spec=gs[:,2])
 
-        # Eigenspectrum
-        plt.subplot(2,2,1)
-        #plt.loglog(np.arange(1,n_pc+1), evs.T)
-        #plt.loglog(np.arange(1,n_pc+1), evs.mean(0))
-        plt.plot(np.arange(1,n_pc_curr+1)/n_pc_curr, mean_evs) #KEEP THIS LINE: proportion of PCs
-        logaxes()
-        pltlabel('log ES', 'PC dimension', 'Variance')
+    ## Spectra
+    for (ip, spec), labs in zip(enumerate(['eigs', 'pows']), [['log ES', 'PC dimension', 'Variance'],
+                                                            ['log PSD', 'Frequency (Hz)', 'Power']]):
+        ax = fig.add_subplot(gs1[ip,0])
+        for i, n_i in enumerate(subsetsizes):
+            if isinstance(n_pc, int) and n_pc < n_i:
+                n_pc_curr = n_pc
+            elif isinstance(n_pc, float):
+                n_pc_curr = int(n_pc*n_i)
+
+            xvals = np.arange(1,n_pc_curr+1)/n_pc_curr if spec == 'eigs'\
+            else np.arange(0,61/120, 1/120)
+            # Eigenspectrum
+            ax.plot(xvals, data[spec][i]) #KEEP THIS LINE: proportion of PCs
+            logaxes()
+            pltlabel(*labs)
+
+    ## Exponent distributions
+    for (ip, exp), labs in zip(enumerate(['pca_m', 'ft_m'+dsuffix]), [['ES exponent \n at each subset size', '', 'Exponent'],
+                                                            ['PSD exponent \n at each subset size', '', 'Exponent']]):
+        ax = fig.add_subplot(gs1[ip,1])
+        exp_plot(data, exp, ax=ax)
+        pltlabel(*labs)
         
-        # PSD
-        plt.subplot(2,2,3)
-        #plt.loglog(np.arange(0,0.505,0.005), pows.T)
-        #plt.loglog(np.arange(0,0.505,0.005), pows.mean(0))
-        plt.plot(np.arange(0,61/120, 1/120), mean_pows)
-        logaxes()
-        pltlabel('log PSD', 'Frequency (Hz)', 'Power')
-    
-    
-    #Space dimension slopes
-    plt.subplot(2,2,2)
-    exp_plot(data, 'pca_m')
-    pltlabel('ES exponent \n at each subset size', '', 'Exponent')
-
-    #Time dimension slopes (SUMMED)
-    plt.subplot(2,2,4)
-    exp_plot(data, 'ft_m1')
-    pltlabel('PSD exponent \n at each subset size', '', 'Exponent')
-
-    # colorbar
-    cax = fig.add_axes([1, 0.3, 0.02, 0.35])
+    ## colorbar for first two cols
+    cax = fig.add_axes([0.45, 0.3, 0.01, 0.35])
     hexes = [mpl.colors.rgb2hex(c) for c in cmap] # VERY hacky way of getting hex values of cmap cool
-    solo_colorbar([hexes[0], hexes[-1]], subset_fractions, 'fraction of neurons', orientation='vertical', cax=cax)
+    solo_colorbar([hexes[0], hexes[-1]], subset_fractions, 'fraction sampled', 
+                orientation='vertical', cax=cax)
+
+    ## Interspec Correlation
+    ax = fig.add_subplot(gs2[:])
+    corr_plot(data['pearson_corr'+dsuffix], 'Pearson',
+            p_vals=data['pearson_p'+dsuffix], ax=ax)
 
     plt.tight_layout()
-    plt.draw()
-
+    plt.show()
     #TODO reset color map
 
 

@@ -189,7 +189,7 @@ def load_npz(file, kind, decomp_dict=None, one_time=False):
         iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p'] # in the past r2 went into here??
         one_time_keys = ['eigs', 'pows', 'space_r2', 'time_r2']
 
-    elif kind in ('sim', 'noise'):
+    elif kind in ('sim', 'noise', 'mouse_shuffle'):
         iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p']
         one_time_keys = ['eigs', 'pows', 'space_er', 'time_er']
 
@@ -204,8 +204,6 @@ def load_npz(file, kind, decomp_dict=None, one_time=False):
             decomp_dict[k].append(data[k])
         return decomp_dict
 
-    # no circular import
-from plot_utils import silent_plot, plot_all_measures
 
 def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     """
@@ -262,9 +260,6 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
                 meta = {'count':count, 'subsetsizes':subset_sizes}
                 data = format_data(f'{dir_}/{mouse}/{region}')
                 data_dict[mouse][region] = {'meta':meta, 'data':data} #appending a big tuple that includes the data
-                
-                if plot: #saves plots in folder
-                    silent_plot(plot_all_measures, [data, meta], f'{plot}/{mouse}_{region}_measures')
 
     elif kind == 'sim': #ising model
         N = analysis_args['N']
@@ -274,17 +269,12 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
             data = format_data(f'{dir_}/{t:.2f}')
             data_dict[f'{t:.2f}'] = {'meta':meta, 'data':data}
             
-            if plot:
-                silent_plot(plot_all_measures, [data, meta], f'{plot}/{t:.2f}_measures.png')  #warning: doesn't have summed equivalent
-            
     elif kind == 'noise': # gaussian noise
         subset_sizes = np.linspace(30, 1462, 16, dtype=int)
         meta  = {'subsetsizes' : subset_sizes}
         data = format_data(f'{dir_}')
         ## since only one kind of noise, just one key
         data_dict['all'] = {'data':data, 'meta':meta} 
-        if plot:
-            silent_plot(plot_all_measures, [data, meta], f'{plot}/_measures.png')
 
     data_dict['meta'] = {**analysis_args['ramsey_params'], 'pc_range':[0,None]} # meta for all data
     

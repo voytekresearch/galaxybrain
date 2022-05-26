@@ -27,10 +27,10 @@ def fooofy(components, spectra, x_range, group=True):
         fg = FOOOF(max_n_peaks=0, aperiodic_mode='fixed', verbose = False) #initialize FOOOF object
     #print(spectra.shape, components.shape) #Use this line if things go weird
 
-    fg.fit(components, spectra, x_range) # THIS IS WHERE YOU SAY WHICH FREQ RANGE TO FIT
+    fg.fit(components, spectra, x_range)
     exponents = fg.get_params('aperiodic_params', 'exponent')
-    errors = fg.get_params('error') # MAE
-    offsets = fg.get_params('aperiodic_params', 'offset')
+    errors    = fg.get_params('error') # MAE
+    offsets   = fg.get_params('aperiodic_params', 'offset')
     return exponents, errors, offsets
 
 
@@ -46,16 +46,16 @@ def pca(data, n_pc):
     return evals
 
 
-def ft_on_data(subset, **ft_kwargs):
+def ft(subset, **ft_kwargs):
     """
     Decomposition in time over both summed and non summed neurons
     returns: freqs, powers_summed, powers_chans (2d array n_chans x n_freqs)
     """
-    if type(subset) != np.ndarray:
+    if not isinstance(subset, np.ndarray):
         subset = np.array(subset)
     summed_neurons = subset.sum(axis= 1) # summing data for ft decomp.
     freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs)   #powers_sum is an array
-    freqs, powers_chans = compute_spectrum(subset.T, **ft_kwargs)   #returns a matrix! #TODO make sure transpose
+    freqs, powers_chans  = compute_spectrum(subset.T, **ft_kwargs)   #returns a matrix! #TODO make sure transpose
 
     return freqs, powers_summed, powers_chans
 
@@ -65,15 +65,14 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
     """shuffle: either 'space' or 'time' to destroy correlations differently
     returned data include 1 pca exponent and 2 PSD exponents
     """
-    #Make these parameters for main func later
-    fs = 1
-    nperseg = 120
-    noverlap = nperseg/2
+    FS       = 1
+    NPERSEG  = 120
+    NOVERLAP = NPERSEG/2
 
-    freqs = np.fft.rfftfreq(nperseg)
+    freqs = np.fft.rfftfreq(NPERSEG)
 
-    evals_mat = np.empty((n_iter, n_pc)) # n_iter * |evals|
-    sum_powers_mat = np.empty((n_iter, len(freqs)))
+    evals_mat       = np.empty((n_iter, n_pc)) # n_iter * |evals|
+    sum_powers_mat  = np.empty((n_iter, len(freqs)))
     chan_powers_mat = np.empty((n_iter, subset_size, len(freqs)))
 
     for i in np.arange(n_iter):
@@ -86,13 +85,13 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
         evals_mat[i] = evals
 
         # decomposition in time
-        freqs, powers_sum, powers_chans = ft_on_data(subset, fs=fs, nperseg=nperseg, noverlap=noverlap)
+        freqs, powers_sum, powers_chans = ft(subset, fs=FS, nperseg=NPERSEG, noverlap=NOVERLAP)
 
-        sum_powers_mat[i] = powers_sum
+        sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
 
     e_axis = np.arange(1,n_pc+1)
-    pca_m_array, pca_er_array, pc_offsets = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
+    pca_m_array, pca_er_array, pc_offsets  = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
     ft_m_array1, ft_er_array1, ft_offsets1 = fooofy(freqs, sum_powers_mat, f_range) #time decomposition exponents, and er
     ft_m_array2, ft_er_array2, ft_offsets2 = np.mean([fooofy(freqs, chan_powers_mat[:,it], f_range) for it in range(subset_size)], axis=0) # list comp here iterates over each neuron
     
@@ -117,8 +116,8 @@ def ramsey(data, subset_sizes, n_iters, n_pc=None, pc_range=[0,None], f_range=[0
     returns: eigs, pows (2D)
             fit results and stats"""
     n = len(subset_sizes)
-    eigs = []
-    powers_sum = []
+    eigs        = []
+    powers_sum  = []
     powers_chan = [] #UNUSED
     fit_results = defaultdict(lambda: np.empty((n_iters, n)))
     stats_ = defaultdict(lambda: np.empty(n))
@@ -146,7 +145,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc=None, pc_range=[0,None], f_range=[0
 
         #f_range conditions
         if isinstance(f_range[1], float):
-            curr_f_range = [f_range[0],f_range[1]]
+            curr_f_range = f_range
         elif f_range[1] == None:
             curr_f_range = None
 
