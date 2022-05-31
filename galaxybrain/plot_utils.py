@@ -150,7 +150,7 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
 
-def plot_all_measures(data, meta, kind='mouse'):
+def plot_all_measures(data, meta, kind='mouse', title=''):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
     kind: 'mouse' (includes sum + nonsum PSD data), 'mouse_old', or 'sim' (ising)
@@ -168,8 +168,8 @@ def plot_all_measures(data, meta, kind='mouse'):
     cmap = plt.cm.cool(subset_fractions)
     plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap)
 
-    gs = GridSpec(2,3, width_ratios=[1,1,4], wspace=0.8) #
-    gs1 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[:,:2], hspace=.5)
+    gs = GridSpec(2,3, width_ratios=[1,1,4], wspace=.8) #
+    gs1 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[:,:2], hspace=0.5, wspace=0.3)
     gs2 = GridSpecFromSubplotSpec(2, 3, subplot_spec=gs[:,2])
 
     ## Spectra
@@ -207,6 +207,7 @@ def plot_all_measures(data, meta, kind='mouse'):
     corr_plot(data['pearson_corr'+dsuffix], 'Pearson',
             p_vals=data['pearson_p'+dsuffix], ax=ax)
 
+    plt.suptitle(title)
     plt.tight_layout()
     plt.show()
     #TODO reset color map
@@ -288,7 +289,9 @@ def all_corr_plot(data, mice=MICE_META.keys(), corr_type='pearson'):
             plt.plot(FRACTIONS, d[f'{corr_type}_corr'].mean(0), color=ckeys[ALL_REGIONS.index(r)], alpha=0.5, lw=3) # marker[i_m]+'-', ms=10
             plt.title('Pearson\'s r (Mouse {})'.format(i_m+1))
             plt.xlim([.0625,1])
-            plt.xlabel('Fraction of neurons'); plt.ylabel('r')
+            plt.ylabel('r')
+
+    fig.supxlabel('fraction sampled', x=.45, y=.1)
 
     # hack for all legend labels
     for i_r, r in enumerate(ALL_REGIONS):
@@ -314,7 +317,7 @@ def corr_heat_map(data, mice=MICE_META.keys(), corr_type='pearson'):
         h_map = heat_maps[i_m]
         cmap = mpl.cm.bwr.set_bad(color='#ababab')
         im = plt.imshow(h_map.fillna(np.nan), 'bwr', extent=[.0625,1,-1,1], aspect='auto')
-        plt.xlabel('Fraction of neurons')
+        plt.xlabel('fraction sampled')
         # NOTE: used to be linspace to 12? 
         plt.yticks(ticks=np.linspace(-1,1,11), verticalalignment='baseline', labels=np.flip(h_map.index), fontsize=16)
         plt.title('Mouse {}'.format(i_m + 1))
@@ -335,7 +338,7 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
             d = data[m][r]['data']
             for pi, exp in enumerate(['pca_m', 'ft_m']):
                 plt.subplot(1,2,pi+1)
-                plt.plot(FRACTIONS, d[exp].mean(0), MARKERS[i]+'-', ms=10, color=ckeys[ALL_REGIONS.index(r)])
+                plt.plot(FRACTIONS, d[exp].mean(0), MARKERS[i]+'-', ms=10, color=ckeys[ALL_REGIONS.index(r)], alpha=0.6)
                 plt.xscale('log')
                 plt.ylabel(title_lu[exp])
                 if exp == 'ft_m': # TODO: shouldn't have to do this manually
@@ -344,7 +347,7 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
     for i_r, r in enumerate(ALL_REGIONS):
         plt.plot(0,1,color=ckeys[i_r], label=r)
 
-    fig.supxlabel('fraction of neurons', x=.45, y=.1)
+    fig.supxlabel('fraction sampled', x=.45, y=.1)
     _sorted_lgnd(xy=(1,1.1))
     plt.tight_layout()
         
