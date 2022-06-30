@@ -11,6 +11,7 @@ def metro_ising(T, runtime, plot=False, N=None, grid=None):
         runtime: iterations
         plot 
     returns array of shape (runtime, N, N)
+    based on : https://www.asc.ohio-state.edu/braaten.1/statphys/Ising_MatLab.pdf
     """
     # set constants to 1 so temperature is dimensionless
     J = 1 #strength of interaction (Joules)

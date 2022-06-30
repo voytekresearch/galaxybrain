@@ -83,7 +83,7 @@ FRACTIONS = np.linspace(.0625,1,16)
 
 
 def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
-    """if given p_vals, annotates point of p>0.05 with a '*' 
+    """if given p_vals, annotates point of p<0.05 with a '*' 
     xvals used to be subsetsizes"""
     n_trials = corr.shape[0]
     label_map = {'Pearson':'r','Spearman':'ρ'}
@@ -97,7 +97,7 @@ def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
         x_off = max(xvals)  * .02
         y_off = max(corr.mean(0)) * .1 # doesn't work as well?
         for x, y, p in zip(xvals, corr.mean(0), p_vals.mean(0)):
-            if p >= 0.05:
+            if p < 0.05:
                 ax.annotate('*', (x-x_off, y-y_off), size=60)
 
 
@@ -153,7 +153,7 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
 def plot_all_measures(data, meta, kind='mouse', title=''):
     """
     meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
-    kind: 'mouse' (includes sum + nonsum PSD data), 'mouse_old', or 'sim' (ising)
+    kind: 'mouse' (includes sum & nonsum PSD data), 'mouse_old', or 'sim' (ising or shuffle)
     plot layout:
     [ ES  ]  [ subset size vs ES exponent  ]   [ correlation ]
     [ PSD ]  [ subset size vs PSD exponent ]
@@ -209,7 +209,6 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
 
     plt.suptitle(title)
     plt.tight_layout()
-    plt.show()
     #TODO reset color map
 
 
@@ -221,11 +220,11 @@ MARKERS   = 'o*^' # one for each mouse
 
 def _array_sig(data):
     """ 
-    Compute if 50% of p values are <= 0.05
+    Compute if 50% of p values are < 0.05
     i.e., if a specific mouse region is significantly correlated
     returns bool
     """
-    bools = data <= 0.05
+    bools = data < 0.05
     return len([1 for i in bools if i == True]) >= 0.5*len(data)
 
 
