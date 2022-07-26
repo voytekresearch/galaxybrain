@@ -137,7 +137,7 @@ if __name__ == '__main__':
     if args.analyze:
         run_analysis(**analysis_args, **ising_args)
 
-    with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
-        json.dump(analysis_args, f, indent=1)
+    with open(f"{OUT_PATH}/ising_analysis_args.json",'w') as f:
+        json.dump({**ising_args, **analysis_args}, f, indent=1)
 
 
