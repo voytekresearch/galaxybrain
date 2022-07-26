@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import sys, os
 import json
+import h5py
+import argparse
 sys.path.append('../')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
@@ -22,6 +24,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 cores = mp.cpu_count()
 pool = mp.Pool(8)
 
+
 def n_from_x(x,n,stp):
     """like np.arange except starting from the middle
     x: start, n: num in either direction, stp: step size"""
@@ -32,7 +35,15 @@ def n_from_x(x,n,stp):
         r.insert(0,nxt_n)
     return r
 
-def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, burn_in = 20, shuffle = False, parallel=True):
+
+def sim_and_save(path, temps, **ising_kwargs):
+    with h5py.File(f'{path}/ising.hdf5', 'a') as f:
+        for temp in temps:
+            data = metro_ising(T=temp, **ising_kwargs)
+            f.create_dataset(f'{temp:.2f}', data=data, dtype='i')
+
+
+def run_analysis(output_dir, num_trials, ramsey_params, temps, burn_in = 20, shuffle = False, parallel=True, **ising_kwargs):
     """
     output_dir: assumes you've made expNUM folder
     ramsey_params: params besides data and subsetsizes
@@ -50,10 +61,9 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
     parallel_labels = [] # for going through results and saving data later
     for t in temps:
         os.makedirs(f'{output_dir}/{t:.2f}')
-        sim_mouse = metro_ising(N=N,T=t, plot=False, runtime=ising_time)
+        sim_mouse = h5py.File('test.hdf5', 'r')
         sim_slice = pd.DataFrame(sim_mouse[200:][:,325]) #this is the data analyzed
-        subsetsizes = np.linspace(30,N-10,16, dtype=int) # using N-10 to accomodate PCA error
-        np.sum(sim_slice.T).to_csv(f'{output_dir}/{t:.2f}/time_series.csv',index=False, header=False) #save summed signals
+        subsetsizes = np.linspace(30, ising_kwargs['N']-10, 16, dtype=int) # using N-10 to accomodate PCA error
         if shuffle:
             for s in range(shuffle[1]):
                 curr_raster = shuffle_data(sim_slice, shuffle[0]) 
@@ -110,15 +120,22 @@ def run_analysis(output_dir, num_trials, ramsey_params, N, ising_time, temps, bu
 
 ### SCRIPT ###
 if __name__ == '__main__':
-
-    analysis_args={'output_dir' : '../../../../projects/ps-voyteklab/brirry/data/experiments/expTESTSIM',
-                    'temps' : n_from_x(2.26918531421, 3, 0.1),
-                    'ising_time': 1000,
-                    'N' : 650,
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', dest='simulate', action='store_true')
+    parser.add_argument('-a', dest='analyze', action='store_true')
+    args = parser.parse_args()
+    temps = n_from_x(2.26918531421, 3, 0.1)
+    OUT_PATH = '/home/brirry/ising_data'
+    ising_args = {'runtime':10000,
+                  'N' : 64}
+    analysis_args={'output_dir' : OUT_PATH,
+                    'temps' : temps,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
                     'num_trials' : 5}
-    
-    run_analysis(**analysis_args)
+    if args.simulate:
+        sim_and_save(OUT_PATH, temps, **ising_args)
+    if args.analyze:
+        run_analysis(**analysis_args, **ising_args)
 
     with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
