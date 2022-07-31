@@ -125,10 +125,10 @@ if __name__ == '__main__':
     parser.add_argument('-a', dest='analyze', action='store_true')
     args = parser.parse_args()
     temps = n_from_x(2.26918531421, 3, 0.1)
-    OUT_PATH = '/home/brirry/ising_data'
+    OUT_PATH = '/home/brirry/ising_data'  
     ising_args = {'runtime':10000,
                   'N' : 64}
-    analysis_args={'output_dir' : OUT_PATH,
+    analysis_args={'output_dir' : OUT_PATH,# TODO this should be a different path for results
                     'temps' : temps,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
                     'num_trials' : 5}

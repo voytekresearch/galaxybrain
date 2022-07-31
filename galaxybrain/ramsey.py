@@ -34,7 +34,7 @@ def fooofy(components, spectra, x_range, group=True):
     return exponents, errors, offsets
 
 
-def pca(data, n_pc):
+def pca(data, n_pc=None):
     """
     Decomposition in space
     """
