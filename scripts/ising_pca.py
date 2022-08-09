@@ -15,4 +15,4 @@ with h5py.File(f'{PATH}/ising_evals.hdf5', 'a') as f:
         tensor = np.array(ising[temp]) # shape := (Time x N x N)
         flattened = tensor.reshape(tensor.shape[0], -1) # shape := (Time x N^2)
         evals = pca(flattened) # n_pc will be smallest number of axis in latest case
-        f.create_dataset(f'{temp:.2f}', data=evals, dtype='f')
+        f.create_dataset(temp, data=evals, dtype='f')
