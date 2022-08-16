@@ -10,7 +10,7 @@ file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
 import ramsey
-from ising import metro_ising
+from ising import metro_ising, T_CRIT
 from analysis_pipe import shuffle_data
 
 import multiprocessing as mp
@@ -124,8 +124,10 @@ if __name__ == '__main__':
     parser.add_argument('-s', dest='simulate', action='store_true')
     parser.add_argument('-a', dest='analyze', action='store_true')
     args = parser.parse_args()
-    temps = n_from_x(2.26918531421, 3, 0.1)
-    OUT_PATH = '/home/brirry/ising_data'  
+    # temps = n_from_x(T_CRIT, 3, 0.1)
+    temps = np.sort(np.append(np.linspace(0.01, 5, 20), T_CRIT))
+
+    OUT_PATH = '/home/brirry/galaxybrain/data/spikes'  
     ising_args = {'runtime':10000,
                   'N' : 64}
     analysis_args={'output_dir' : OUT_PATH,# TODO this should be a different path for results

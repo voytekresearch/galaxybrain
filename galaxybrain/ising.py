@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import clear_output
 
+
+T_CRIT = 2.26918531421
+
+
 def metro_ising(T, runtime, plot=False, N=None, grid=None):
     """
     Metropolis Monte-Carlo Markov Chain algorithm
@@ -19,7 +23,7 @@ def metro_ising(T, runtime, plot=False, N=None, grid=None):
     frames = []
 
     if T == 'critical':
-        T = 2.26918531421
+        T = T_CRIT
 
     if grid != None:
         N = grid.shape[0]
