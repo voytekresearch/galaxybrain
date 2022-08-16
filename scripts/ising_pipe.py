@@ -7,8 +7,8 @@ import argparse
 from pathlib import Path
 
 here = Path(__file__)
-sys.path.append(here.parent)
-sys.path.append(here.parent.parent / 'galaxybrain')
+sys.path.append(here.parent.absolute())
+sys.path.append(here.parent.absolute().parent.absolute() / 'galaxybrain')
 
 import ramsey
 from ising import metro_ising, T_CRIT
