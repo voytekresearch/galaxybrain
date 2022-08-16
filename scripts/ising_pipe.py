@@ -5,7 +5,7 @@ import sys, os
 import json
 import h5py
 import argparse
-sys.path.append('../')
+sys.path.append('../galaxybrain')
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
