@@ -1,13 +1,14 @@
-from re import T
 import numpy as np
 import pandas as pd
 import sys, os
 import json
 import h5py
 import argparse
-sys.path.append('../galaxybrain')
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
+from pathlib import Path
+
+here = Path(__file__)
+sys.path.append(here.parent)
+sys.path.append(here.parent.parent / 'galaxybrain')
 
 import ramsey
 from ising import metro_ising, T_CRIT
@@ -16,8 +17,6 @@ from analysis_pipe import shuffle_data
 import multiprocessing as mp
 
 import warnings
-import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 #Parallel stuff
