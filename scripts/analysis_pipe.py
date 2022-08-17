@@ -1,9 +1,11 @@
 import numpy as np
 import sys, os
 import json
-sys.path.append('../')
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
+from pathlib import Path
+
+here = Path(__file__)
+sys.path.append(str(here.parent.absolute()))
+sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
 
 from data_utils import load_mouse_data, return_pops
 import ramsey

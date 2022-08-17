@@ -5,10 +5,6 @@ import sys, os
 import json
 import re
 
-sys.path.append('../')
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
-
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)

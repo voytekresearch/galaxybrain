@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import sys, os
 import json
-sys.path.append('../')
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
+from pathlib import Path
+
+here = Path(__file__)
+sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
 
 import ramsey
 

@@ -1,7 +1,9 @@
 import sys
-import pathlib
 import os
-sys.path.append(os.path.join(pathlib.Path(__file__).parent.resolve().parent.resolve(), 'galaxybrain'))
+from pathlib import Path
+
+here = Path(__file__)
+sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
 #print(pathlib.Path(__file__).parent.resolve().parent.resolve())
 from ramsey import pca
 import h5py
