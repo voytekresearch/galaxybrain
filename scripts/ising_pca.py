@@ -16,5 +16,6 @@ with h5py.File(f'{PATH}/ising_evals.hdf5', 'a') as f:
     for temp in ising:
         tensor = np.array(ising[temp]) # shape := (Time x N x N)
         flattened = tensor.reshape(tensor.shape[0], -1) # shape := (Time x N^2)
-        evals = pca(flattened) # n_pc will be smallest number of axis in latest case
+        n_pc = int(0.8 * min(flattened.shape)) # n_pc default is smallest number of axis in latest case
+        evals = pca(flattened, n_pc=n_pc) 
         f.create_dataset(temp, data=evals, dtype='f')
