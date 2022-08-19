@@ -22,9 +22,9 @@ def fooofy(components, spectra, x_range, group=True):
         group: whether to use FOOOFGroup or not
     """
     if group:
-        fg = FOOOFGroup(max_n_peaks=0, aperiodic_mode='fixed', verbose = False) #initialize FOOOF object
+        fg = FOOOFGroup(max_n_peaks=0, aperiodic_mode='fixed', verbose=False) #initialize FOOOF object
     else:
-        fg = FOOOF(max_n_peaks=0, aperiodic_mode='fixed', verbose = False) #initialize FOOOF object
+        fg = FOOOF(max_n_peaks=0, aperiodic_mode='fixed', verbose=False) #initialize FOOOF object
     #print(spectra.shape, components.shape) #Use this line if things go weird
 
     fg.fit(components, spectra, x_range)
