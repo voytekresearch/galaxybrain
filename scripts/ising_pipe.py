@@ -96,7 +96,7 @@ def run_analysis(output_dir, num_trials, ramsey_params, temps, burn_in = 20, shu
                     np.savez(f'{output_dir}/{t:.2f}/ramsey_{i+1}', eigs=eigs, pows=pows, pca_m=pca_m, space_er=s_er, ft_m=ft_m, time_er=t_er, pearson_r=psn_r, spearman_rho=spn_r, pearson_p=psn_p, spearman_p=spn_p)
         
     if parallel:
-        results = [pool.apply(ramsey.ramsey, args = (_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
+        results = [pool.apply(ramsey.ramsey, args=(_curr_raster, _subsetsizes, n_iters, n_pc, f_range)) for (_curr_raster,_subsetsizes) in parallel_args]
         pool.close()
         if shuffle:
             for i in np.arange(0,len(results), num_trials):
@@ -126,12 +126,12 @@ if __name__ == '__main__':
     # temps = n_from_x(T_CRIT, 3, 0.1)
     temps = np.sort(np.append(np.linspace(0.01, 5, 20), T_CRIT))
 
-    OUT_PATH = '/home/brirry/galaxybrain/data/spikes'  
+    OUT_PATH = '/home/brirry/galaxybrain/data/experiments/ising_better_fit'  
     ising_args = {'runtime':10000,
                   'N' : 64}
-    analysis_args={'output_dir' : OUT_PATH,# TODO this should be a different path for results
+    analysis_args={'output_dir' : OUT_PATH,
                     'temps' : temps,
-                    'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'f_range' : [0,0.4]},
+                    'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'pc_range': [0,0.1], 'f_range' : [0,0.4]},
                     'num_trials' : 5}
     if args.simulate:
         sim_and_save(OUT_PATH, temps, **ising_args)

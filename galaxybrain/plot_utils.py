@@ -215,7 +215,7 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
 ## Analysis summary plots ##
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~0
-from data_utils import MICE_META, ALL_REGIONS
+from .data_utils import MICE_META, ALL_REGIONS
 MARKERS   = 'o*^' # one for each mouse
 
 def _array_sig(data):

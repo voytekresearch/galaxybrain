@@ -13,7 +13,7 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 
 
-def fooofy(components, spectra, x_range, group=True):
+def fooofy(components, spectra, x_range, group=True, **kwargs):
     """
     fit FOOOF model on given spectrum and return params
         components: frequencies or PC dimensions
@@ -22,9 +22,9 @@ def fooofy(components, spectra, x_range, group=True):
         group: whether to use FOOOFGroup or not
     """
     if group:
-        fg = FOOOFGroup(max_n_peaks=0, aperiodic_mode='fixed', verbose=False) #initialize FOOOF object
+        fg = FOOOFGroup(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
     else:
-        fg = FOOOF(max_n_peaks=0, aperiodic_mode='fixed', verbose=False) #initialize FOOOF object
+        fg = FOOOF(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
     #print(spectra.shape, components.shape) #Use this line if things go weird
 
     fg.fit(components, spectra, x_range)
@@ -61,8 +61,8 @@ def ft(subset, **ft_kwargs):
 
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
-def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_iter=150):
-    """shuffle: either 'space' or 'time' to destroy correlations differently
+def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_range):
+    """
     returned data include 1 pca exponent and 2 PSD exponents
     """
     FS       = 1
@@ -109,7 +109,7 @@ def random_subset_decomp(raster_curr, subset_size, n_pc, pc_range, f_range, n_it
     return spectra, fit_dict
 
 
-def ramsey(data, subset_sizes, n_iters, n_pc=None, pc_range=[0,None], f_range=[0,None]):
+def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,None]):
     """Do random_subset_decomp over incrementing subset sizes
     slope dims: n_iters * amount of subset sizes
     b: offsets
@@ -150,7 +150,7 @@ def ramsey(data, subset_sizes, n_iters, n_pc=None, pc_range=[0,None], f_range=[0
             curr_f_range = None
 
         # pc_range_history.append(curr_pc_range)
-        spectra_i, results_i = random_subset_decomp(data, n_i, n_pc_curr, curr_pc_range, curr_f_range, n_iters) #remember to add parameters later, check function doc for output
+        spectra_i, results_i = random_subset_decomp(data, n_i, n_iter, n_pc_curr, curr_pc_range, curr_f_range) #remember to add parameters later, check function doc for output
 
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
