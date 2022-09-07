@@ -13,25 +13,26 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 
 
-def fooofy(components, spectra, x_range, group=True, **kwargs):
+def fooofy(components, spectra, fit_range, 
+           group=True, 
+           return_params=[['aperiodic_params', 'exponent'],
+                          ['error'], # MAE
+                          ['aperiodic_params', 'offset']], 
+           **kwargs):
     """
     fit FOOOF model on given spectrum and return params
         components: frequencies or PC dimensions
         spectra: PSDs or variance explained
-        x_range: range for x axis of spectrum to fit
+        fit_range: range for x axis of spectrum to fit
         group: whether to use FOOOFGroup or not
     """
     if group:
         fg = FOOOFGroup(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
     else:
         fg = FOOOF(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
-    #print(spectra.shape, components.shape) #Use this line if things go weird
 
-    fg.fit(components, spectra, x_range)
-    exponents = fg.get_params('aperiodic_params', 'exponent')
-    errors    = fg.get_params('error') # MAE
-    offsets   = fg.get_params('aperiodic_params', 'offset')
-    return exponents, errors, offsets
+    fg.fit(components, spectra, fit_range)
+    return [fg.get_params(*p) for p in return_params]
 
 
 def pca(data, n_pc=None):
@@ -61,7 +62,7 @@ def ft(subset, **ft_kwargs):
 
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
-def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_range):
+def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_range, **ft_kwargs):
     """
     returned data include 1 pca exponent and 2 PSD exponents
     """
@@ -85,7 +86,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_ran
         evals_mat[i] = evals
 
         # decomposition in time
-        freqs, powers_sum, powers_chans = ft(subset, fs=FS, nperseg=NPERSEG, noverlap=NOVERLAP)
+        freqs, powers_sum, powers_chans = ft(subset, **ft_kwargs)
 
         sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
@@ -109,9 +110,9 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_ran
     return spectra, fit_dict
 
 
-def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,None]):
+def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,None], **ft_kwargs):
     """Do random_subset_decomp over incrementing subset sizes
-    slope dims: n_iters * amount of subset sizes
+    slope dims: n_iter * amount of subset sizes
     b: offsets
     returns: eigs, pows (2D)
             fit results and stats"""
@@ -119,10 +120,9 @@ def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,
     eigs        = []
     powers_sum  = []
     powers_chan = [] #UNUSED
-    fit_results = defaultdict(lambda: np.empty((n_iters, n)))
+    fit_results = defaultdict(lambda: np.empty((n_iter, n)))
     stats_ = defaultdict(lambda: np.empty(n))
 
-    # pc_range_history = []
     for i, n_i in enumerate(subset_sizes):
 
         #if at some subset size not enough pc's, default to biggest
@@ -149,15 +149,13 @@ def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,
         elif f_range[1] == None:
             curr_f_range = None
 
-        # pc_range_history.append(curr_pc_range)
-        spectra_i, results_i = random_subset_decomp(data, n_i, n_iter, n_pc_curr, curr_pc_range, curr_f_range) #remember to add parameters later, check function doc for output
+        spectra_i, results_i = random_subset_decomp(data, n_i, n_iter, n_pc_curr, curr_pc_range, curr_f_range, **ft_kwargs)
 
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
         powers_sum.append(spectra_i['psd'].mean(0))
 
         for measure, dat in results_i.items():
-            # print(f'~~~~~~~~~~DEBUG {i} {n_i} \n {measure}, {dat.shape} \n', flush=True)
             fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed

@@ -42,7 +42,7 @@ def sim_and_save(path, temps, **ising_kwargs):
             f.create_dataset(f'{temp:.2f}', data=data, dtype='i')
 
 
-def run_analysis(output_dir, num_trials, ramsey_params, temps, burn_in = 20, shuffle = False, parallel=True, **ising_kwargs):
+def run_analysis(output_dir, num_trials, ramsey_params, temps, burn_in=20, shuffle = False, parallel=True, **ising_kwargs):
     """
     output_dir: assumes you've made expNUM folder
     ramsey_params: params besides data and subsetsizes
@@ -132,7 +132,12 @@ if __name__ == '__main__':
     analysis_args={'output_dir' : OUT_PATH,
                     'temps' : temps,
                     'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'pc_range': [0,0.1], 'f_range' : [0,0.4]},
-                    'num_trials' : 5}
+                    'num_trials' : 5,
+                    'ft_kwargs': {
+                        'fs': 1,
+                        'nperseg': 2000,
+                        'noverlap': int(.8*2000)
+                    }}
     if args.simulate:
         sim_and_save(OUT_PATH, temps, **ising_args)
     if args.analyze:

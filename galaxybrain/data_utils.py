@@ -17,6 +17,39 @@ MICE_META   = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'T
                'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
 ALL_REGIONS = list({k2 for v1 in MICE_META.values() for k2 in v1}) # list to use indices later
 
+### Helper functions
+
+def _beg_end(spikes_all):
+    spikes_concat = np.concatenate(spikes_all)
+    return np.floor(spikes_concat.min()), np.ceil(spikes_concat.max())
+
+
+def _return_pops(data, df_info):
+    """ Return different populations in a list.
+
+    Parameters
+    ----------
+    data : matrix or dataframe, time x neuron.
+    df_info : dataframe
+        Cluster information for which region each cluster falls into.
+
+    Returns
+    -------
+    list
+        List of spiketime matrices, grouped based on region.
+
+    """
+    pop_list, region_labels = [], []
+    for reg, grp in df_info.groupby('region'):
+        if type(data) is type(pd.DataFrame()):
+            # dataframe is passed in, all good
+            pop_list.append(np.squeeze(data[grp.index.values].values))
+        else:
+            # assume the group indices line up with the data array indices
+            pop_list.append(np.squeeze(data[grp.index.values]))
+        region_labels.append(reg)
+    return pop_list, region_labels
+
 
 def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smooth_param=[0.2, 0.025]):
     """ Load neuropixel data from Stringer et al., 2019
@@ -83,82 +116,54 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         return df_spk_smo, clu_info
 
 
-def return_pops(data, df_info):
-    """ Return different populations in a list.
-
-    Parameters
-    ----------
-    data : matrix or dataframe, time x neuron.
-    df_info : dataframe
-        Cluster information for which region each cluster falls into.
-
-    Returns
-    -------
-    list
-        List of spiketime matrices, grouped based on region.
-
-    """
-    pop_list, region_labels = [], []
-    for reg, grp in df_info.groupby('region'):
-        if type(data) is type(pd.DataFrame()):
-            # dataframe is passed in, all good
-            pop_list.append(np.squeeze(data[grp.index.values].values))
-        else:
-            # assume the group indices line up with the data array indices
-            pop_list.append(np.squeeze(data[grp.index.values]))
-        region_labels.append(reg)
-    return pop_list, region_labels
-
-
-def _beg_end(spikes_all):
-    spikes_concat = np.concatenate(spikes_all)
-    return np.floor(spikes_concat.min()), np.ceil(spikes_concat.max())
-
-
-def spike_dict(mice_ix=range(3)):
-    """
-    Uses load_mouse_data to return a dictionary of mouse data and region info
-    args:
-        mice_ix: list of mouse specific indices (0,1,2)
+class MouseData:
+    mice_names = list(MICE_META.keys())
+    def __init__(self, mouse_in=['krebs','robbins','waksman'], burn_in=20):
+        """
+        Uses load_mouse_data to return a dictionary of mouse data and region info
+        args:
+            mice_ix: list of mouse specific indices (0,1,2)
+            
+        Returns:
+            Dict of form: {mouse_name : (spike_dataframe, region_indices_dict }
+            See mouse_iter() for use case
+        """
         
-    Returns:
-        Dict of form: {mouse_name : ( (spike_dataframe, region_indices_dict), 
-                                    {region1:count, region2:count...} )
-                        }
-        See mouse_iter() for use case
-    """
-    
-    datafolder = '../data/spikes/'
-
-    raster_dict = {}
-    for i_m, name in zip(mice_ix, MICE_META):
-        print(f'Mouse {i_m+1}')
-        df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
-        region_indices = {}
-        for region in df_info.region.unique():
-            region_indices.update({region:np.where(df_info['region'] == str(region))[0]})
-            
-        spk_list, region_labels = return_pops(df_spk, df_info)
-        print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
-        su_start_ind = len(region_labels)+1
-        raster_dict[name] = ( (df_spk[df_spk.columns[su_start_ind:]], region_indices), MICE_META[name] )
-
-    return raster_dict
+        datafolder = '../data/spikes/'
+        self.mouse_in = mouse_in
+        self.burn_in = burn_in
+        self.raster_dict = {}
+        for name in mouse_in:
+            i_m = self.mice_names.index(name)
+            print(f'Mouse {i_m+1}')
+            df_spk, df_info = load_mouse_data(datafolder, i_m, return_type='binned', bin_width=1)
+            region_indices = {}
+            for region in df_info.region.unique():
+                region_indices.update({region:np.where(df_info['region'] == str(region))[0]})
+                
+            spk_list, region_labels = _return_pops(df_spk, df_info)
+            print(list(zip(region_labels, [s.shape[1] for s in spk_list])), 'Total:',sum([s.shape[1] for s in spk_list]))
+            su_start_ind = len(region_labels)+1
+            self.raster_dict[name] = (df_spk[df_spk.columns[su_start_ind:]], region_indices)
 
 
-def mouse_iter(raster_dict, mouse_key, burn_in):
-    """Yields mouse spikes in an oft used loop"""
-    mouse_spk     = raster_dict[mouse_key][0] # DF
-    region_counts = raster_dict[mouse_key][1] # dict like {'TH': 123, ... }
-    for rn in region_counts:
-        rc = region_counts[rn]
-        print(rn)
-        if rn == 'all':
-            mouse_raster = mouse_spk[0].iloc[burn_in:-burn_in]
-        else:
-            mouse_raster = mouse_spk[0][mouse_spk[1][rn]].iloc[burn_in:-burn_in]
-            
-        yield np.array(mouse_raster), rn, rc
+    def mouse_iter(self, mouse_name):
+        """
+        Yields mouse spike df, region name, and region count
+        (for any analysis loop)
+        """
+        if mouse_name not in self.raster_dict.keys():
+            raise KeyError(f'{mouse_name} not in self.raster_dict')
+        ix = self.burn_in
+        spike_df, region_idx = self.raster_dict[mouse_name]
+        for region in MICE_META[mouse_name]:
+            count = MICE_META[mouse_name][region]
+            if region == 'all':
+                mouse_raster = spike_df.iloc[ix:-ix]
+            else:
+                mouse_raster = spike_df[region_idx[region]].iloc[ix:-ix]
+                
+            yield mouse_raster, region, count
 
 #####################################
 ### Analysis result data handling ###
