@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import clear_output
+import h5py
 
 
 T_CRIT = 2.26918531421
@@ -67,3 +68,15 @@ def metro_ising(T, runtime, plot=False, N=None, grid=None):
     frames[frames==1] = 0 #play around looking if up or down spin affects this
     frames[frames==-1] = 1
     return frames
+
+
+def sim_and_save(path, temps, **ising_kwargs):
+    """
+    NOTE: last ising_args = {'runtime':10000,
+                  'N' : 64}
+         last temps = np.sort(np.append(np.linspace(0.01, 5, 20), T_CRIT))
+    """
+    with h5py.File(f'{path}/ising.hdf5', 'a') as f:
+        for temp in temps:
+            data = metro_ising(T=temp, **ising_kwargs)
+            f.create_dataset(f'{temp:.2f}', data=data, dtype='i')

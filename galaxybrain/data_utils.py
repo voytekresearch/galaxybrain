@@ -116,9 +116,20 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         return df_spk_smo, clu_info
 
 
+def shuffle_data(data, axis): 
+    """Helper function to shuffle data"""
+    if axis == 'time':
+        t_ind = np.arange(data.shape[0]) 
+        np.random.shuffle(t_ind)
+        raster_curr = data.iloc[t_ind]
+    elif axis == 'space':
+        raster_curr = data.apply(np.random.permutation, axis=1, result_type='broadcast') #need broadcast to maintain shape
+    return raster_curr
+
+    
 class MouseData:
     mice_names = list(MICE_META.keys())
-    def __init__(self, mouse_in=['krebs','robbins','waksman'], burn_in=20):
+    def __init__(self, mouse_in=['krebs','robbins','waksman'], burn_in=20, phantom=False):
         """
         Uses load_mouse_data to return a dictionary of mouse data and region info
         args:
@@ -129,10 +140,13 @@ class MouseData:
             See mouse_iter() for use case
         """
         
-        datafolder = '../data/spikes/'
-        self.mouse_in = mouse_in
-        self.burn_in = burn_in
+        datafolder       = '../data/spikes/'
+        self.mouse_in    = mouse_in
+        self.burn_in     = burn_in
         self.raster_dict = {}
+        self.phantom     = phantom
+        if phantom:
+            return
         for name in mouse_in:
             i_m = self.mice_names.index(name)
             print(f'Mouse {i_m+1}')
@@ -146,24 +160,37 @@ class MouseData:
             su_start_ind = len(region_labels)+1
             self.raster_dict[name] = (df_spk[df_spk.columns[su_start_ind:]], region_indices)
 
+    def get_spikes(self, mouse_name, region):
+        """
+        return single raster for mouse-region pair
+        df shape: n_time x n_neuron
+        """
+        if mouse_name not in self.mouse_in:
+            raise KeyError(f'{mouse_name} not loaded')
+        if self.phantom:
+            return self.dummy_data()
+        ix = self.burn_in
+        spike_df, region_idx = self.raster_dict[mouse_name]
+        if region == 'all':
+            mouse_raster = spike_df.iloc[ix:-ix]
+        else:
+            mouse_raster = spike_df[region_idx[region]].iloc[ix:-ix]
+
+        return mouse_raster
 
     def mouse_iter(self, mouse_name):
         """
-        Yields mouse spike df, region name, and region count
+        Yields mouse spike df, region name
         (for any analysis loop)
         """
-        if mouse_name not in self.raster_dict.keys():
-            raise KeyError(f'{mouse_name} not in self.raster_dict')
-        ix = self.burn_in
-        spike_df, region_idx = self.raster_dict[mouse_name]
         for region in MICE_META[mouse_name]:
-            count = MICE_META[mouse_name][region]
-            if region == 'all':
-                mouse_raster = spike_df.iloc[ix:-ix]
-            else:
-                mouse_raster = spike_df[region_idx[region]].iloc[ix:-ix]
-                
-            yield mouse_raster, region, count
+            mouse_raster = self.get_spikes(mouse_name, region)
+            yield mouse_raster, region
+
+    def dummy_data(self):
+        """fake data for debugging"""
+        return pd.DataFrame(np.random.poisson(1, size=(500,100)))
+
 
 #####################################
 ### Analysis result data handling ###

@@ -13,12 +13,13 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 
 
-def fooofy(components, spectra, fit_range, 
+def fooofy(components, spectra, fit_range,
            group=True, 
+           fit_kwargs={},
            return_params=[['aperiodic_params', 'exponent'],
                           ['error'], # MAE
                           ['aperiodic_params', 'offset']], 
-           **kwargs):
+           ):
     """
     fit FOOOF model on given spectrum and return params
         components: frequencies or PC dimensions
@@ -27,12 +28,13 @@ def fooofy(components, spectra, fit_range,
         group: whether to use FOOOFGroup or not
     """
     if group:
-        fg = FOOOFGroup(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
+        fg = FOOOFGroup(max_n_peaks=0, verbose=False, **fit_kwargs)
     else:
-        fg = FOOOF(max_n_peaks=0, verbose=False, **kwargs) #initialize FOOOF object
+        fg = FOOOF(max_n_peaks=0, verbose=False, **fit_kwargs)
 
     fg.fit(components, spectra, fit_range)
-    return [fg.get_params(*p) for p in return_params]
+    return {p[-1]: fg.get_params(*p) 
+                    for p in return_params}
 
 
 def pca(data, n_pc=None):
@@ -49,28 +51,39 @@ def pca(data, n_pc=None):
 
 def ft(subset, **ft_kwargs):
     """
-    Decomposition in time over both summed and non summed neurons
+    Welch method over both summed and non summed neurons
     returns: freqs, powers_summed, powers_chans (2d array n_chans x n_freqs)
+
+    fourier kwargs for mouse:
+        fs       = 1
+        nperseg  = 120
+        noverlap = NPERSEG/2
+    for ising model 10000 long
+        fs       = 1
+        nperseg  = 2000
+        noverlap = int(.8*NPERSEG)
     """
     if not isinstance(subset, np.ndarray):
         subset = np.array(subset)
     summed_neurons = subset.sum(axis= 1) # summing data for ft decomp.
-    freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs)   #powers_sum is an array
-    freqs, powers_chans  = compute_spectrum(subset.T, **ft_kwargs)   #returns a matrix! #TODO make sure transpose
+    freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs, method='welch') #powers_sum is an array
+    freqs, powers_chans  = compute_spectrum(subset.T,       **ft_kwargs, method='welch') #returns a matrix!
 
     return freqs, powers_summed, powers_chans
 
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
-def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_range, **ft_kwargs):
+def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
     """
     returned data include 1 pca exponent and 2 PSD exponents
+    fooof_kwargs = { 'es' : {
+                        'return_params': [...],
+                        'fit_kwargs': {...}
+                        }
+                     'psd': SAME^
+                     }
     """
-    FS       = 1
-    NPERSEG  = 120
-    NOVERLAP = NPERSEG/2
-
-    freqs = np.fft.rfftfreq(NPERSEG)
+    freqs = np.fft.rfftfreq(ft_kwargs['nperseg'])
 
     evals_mat       = np.empty((n_iter, n_pc)) # n_iter * |evals|
     sum_powers_mat  = np.empty((n_iter, len(freqs)))
@@ -92,48 +105,53 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, pc_range, f_ran
         chan_powers_mat[i] = powers_chans
 
     e_axis = np.arange(1,n_pc+1)
-    pca_m_array, pca_er_array, pc_offsets  = fooofy(e_axis, evals_mat, pc_range) #space decomposition exponents, and er
-    ft_m_array1, ft_er_array1, ft_offsets1 = fooofy(freqs, sum_powers_mat, f_range) #time decomposition exponents, and er
-    ft_m_array2, ft_er_array2, ft_offsets2 = np.mean([fooofy(freqs, chan_powers_mat[:,it], f_range) for it in range(subset_size)], axis=0) # list comp here iterates over each neuron
+    es_fit  = fooofy(e_axis, evals_mat, pc_range, **fooof_kwargs.get('es', {}))
+    psd_fit1 = fooofy(freqs, sum_powers_mat, f_range, **fooof_kwargs.get('psd', {}))
+    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,it], f_range, **fooof_kwargs.get('psd', {})) 
+                                                        for it in range(subset_size)] # list comp here iterates over each neuron
+    psd_fit2 = defaultdict(lambda: [])
+    for d in psd_fit2_list:
+        for key, params in d.items():
+            psd_fit2[key].append(params)
+    psd_fit2 = {k:np.mean(v) for k,v in psd_fit2.items()}
     
     spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
-    fit_dict = {'pca_m':pca_m_array,
-                'pca_er':pca_er_array,
-                'pca_b':pc_offsets,
-                'ft_m1':ft_m_array1,
-                'ft_er1':ft_er_array1,
-                'ft_b1':ft_offsets1,
-                'ft_m2':ft_m_array2,
-                'ft_er2':ft_er_array2,
-                'ft_b2':ft_offsets2 }
+    fit_dict = {**{f'es_{k}'   :v for k,v in es_fit.items()}, # renaming keys for each measure
+                **{f'psd_{k}1':v for k,v in psd_fit1.items()},
+                **{f'psd_{k}2':v for k,v in psd_fit2.items()},}
 
     return spectra, fit_dict
 
 
-def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,None], **ft_kwargs):
+def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse'):
     """Do random_subset_decomp over incrementing subset sizes
     slope dims: n_iter * amount of subset sizes
     b: offsets
     returns: eigs, pows (2D)
             fit results and stats"""
-    n = len(subset_sizes)
+    if data_type == 'mouse':
+        subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
+    elif data_type == 'ising':
+        subset_sizes = np.linspace(30, data.shape[1] - 10, 16, dtype=int)
+        
+
+    n           = len(subset_sizes)
     eigs        = []
     powers_sum  = []
-    powers_chan = [] #UNUSED
     fit_results = defaultdict(lambda: np.empty((n_iter, n)))
-    stats_ = defaultdict(lambda: np.empty(n))
+    stats_      = defaultdict(lambda: np.empty(n))
 
-    for i, n_i in enumerate(subset_sizes):
+    for i, num in enumerate(subset_sizes):
 
         #if at some subset size not enough pc's, default to biggest
         #default is using a proportion of that
 
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subset_sizes)
-        elif isinstance(n_pc, int) and n_pc < n_i:
+        elif isinstance(n_pc, int) and n_pc < num:
             n_pc_curr = n_pc
         elif isinstance(n_pc, float):
-            n_pc_curr = int(n_pc*n_i)
+            n_pc_curr = int(n_pc*num)
 
         #write conditions for pc_range,  use a function, or outside of this
         # [0,None] for whole range, otherwise check if float for fraction
@@ -149,7 +167,7 @@ def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,
         elif f_range[1] == None:
             curr_f_range = None
 
-        spectra_i, results_i = random_subset_decomp(data, n_i, n_iter, n_pc_curr, curr_pc_range, curr_f_range, **ft_kwargs)
+        spectra_i, results_i = random_subset_decomp(data, num, n_iter, n_pc_curr, ft_kwargs, curr_pc_range, curr_f_range, fooof_kwargs)
 
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
@@ -159,8 +177,11 @@ def ramsey(data, subset_sizes, n_iter, n_pc=None, pc_range=[0,None], f_range=[0,
             fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed
-            stats_[f'pearson_r{it}'][i], stats_[f'pearson_p{it}'][i] = stats.pearsonr(results_i['pca_m'], results_i[f'ft_m{it}'])
-            stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.pearsonr(results_i['pca_m'], results_i[f'ft_m{it}'])
+            stats_[f'pearson_r{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+            stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
         
-    # Have to unpack dict for parallel processing. key order is conserved in python 3.6+
-    return (eigs, powers_sum, *[v for v in fit_results.values()], *[v for v in stats_.values()]) #, pc_range_history
+    # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
+    return {'eigs': eigs, 
+            'pows': powers_sum, 
+            **fit_results, 
+            **stats_}
