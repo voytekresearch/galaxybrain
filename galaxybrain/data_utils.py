@@ -146,6 +146,10 @@ class MouseData:
         self.raster_dict = {}
         self.phantom     = phantom
         if phantom:
+            global MICE_META
+            # limit to one iteration
+            MICE_META = {'phantom':{'phantom_region':None}}
+            self.mouse_in = ['phantom'] 
             return
         for name in mouse_in:
             i_m = self.mice_names.index(name)

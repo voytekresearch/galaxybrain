@@ -57,26 +57,18 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
         else:
             for i in range(len(results)):
                 region_or_temp, tn = parallel_labels[i][0], parallel_labels[i][1]
-                curr_output = np.array(results[i])
-                np.savez(f'{save_dir}/{region_or_temp}/ramsey_{tn+1}', eigs=curr_output[0], pows=curr_output[1], 
-                                                                        pca_m=curr_output[2], pca_er=curr_output[3], pca_b=curr_output[4], 
-                                                                        ft_m1=curr_output[5], ft_er1=curr_output[6],ft_b1=curr_output[7], 
-                                                                        ft_m2=curr_output[8], ft_er2=curr_output[9],ft_b2=curr_output[10], 
-                                                                        pearson_r1=curr_output[11], spearman_rho1=curr_output[13], 
-                                                                        pearson_p1=curr_output[12], spearman_p1=curr_output[14],
-                                                                        pearson_r2=curr_output[15], spearman_rho2=curr_output[17], 
-                                                                        pearson_p2=curr_output[16], spearman_p2=curr_output[18])
+                curr_output = results[i]
+                np.savez(f'{save_dir}/{region_or_temp}/ramsey_{tn+1}', **curr_output)
 
     if data_type == 'mouse':
-        ## NOTE DEBUG
-        mice_data = MouseData(phantom=True) #MouseData(**mouse_kwargs)
-        ## END DEBUG
+        mice_data = MouseData(**mouse_kwargs)
         for mouse_name in mice_data.mouse_in:
             ### TODO : maybe move this outside and append mouse names to labels ###
             parallel_args = [] # keep track of indices
             parallel_labels = [] # for going through results and saving data later
             for mouse_raster, region_name in mice_data.mouse_iter(mouse_name):
-                os.makedirs(f'{output_dir}/{mouse_name}/{region_name}')
+                if not os.path.exists(f'{output_dir}/{mouse_name}/{region_name}'):
+                    os.makedirs(f'{output_dir}/{mouse_name}/{region_name}')
 
                 if shuffle:
                     for s in range(shuffle[1]):
@@ -118,8 +110,22 @@ if __name__ == '__main__':
     parser.add_argument('-i', dest='ising', action='store_true')
     #Parallel stuff
     # CORES = mp.cpu_count()
-    POOL = mp.Pool(7)
-    ## MOUSE
+    POOL = mp.Pool(1)
+    phantom_analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
+                        'mouse_kwargs': {'phantom':True},
+                        'ramsey_kwargs' : {
+                                            'n_iter': 2, 
+                                            'n_pc': 0.8, 
+                                            'pc_range': [0, None],
+                                            'f_range': [0,0.4],
+                                            'ft_kwargs': {
+                                                            'fs'      : 1,
+                                                            'nperseg' : 120,
+                                                            'noverlap': 120/2
+                                                        }
+                                        },
+                        'num_trials' : 4,
+                        }
     mouse_analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
                             'ramsey_kwargs' : {
                                                 'n_iter': 95, 
@@ -152,7 +158,7 @@ if __name__ == '__main__':
                                     }
                     }
     
-    run_analysis(**mouse_analysis_args)
+    run_analysis(**phantom_analysis_args)
 
     with open(f"{mouse_analysis_args['output_dir']}/analysis_args.json",'w') as f:
         json.dump(mouse_analysis_args, f, indent=1)

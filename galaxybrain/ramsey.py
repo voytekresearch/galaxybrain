@@ -113,7 +113,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
     for d in psd_fit2_list:
         for key, params in d.items():
             psd_fit2[key].append(params)
-    psd_fit2 = {k:np.mean(v) for k,v in psd_fit2.items()}
+    psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
     
     spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
     fit_dict = {**{f'es_{k}'   :v for k,v in es_fit.items()}, # renaming keys for each measure
