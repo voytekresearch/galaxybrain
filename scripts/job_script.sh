@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q hotel
 #PBS -N "galaxybrain_ising"
-#PBS -l nodes=1:ppn=7  
+#PBS -l nodes=1:ppn=8 
 #PBS -l walltime=32:00:00
 #PBS -o output.out
 #PBS -e error.err
@@ -9,4 +9,4 @@
 #PBS -m abe
 ROOT="/home/brirry/galaxybrain"
 
-python ${ROOT}/scripts/ising_pipe.py -a
+python ${ROOT}/scripts/analysis_pipe.py -i

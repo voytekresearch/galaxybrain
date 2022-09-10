@@ -107,11 +107,14 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
+    parser.add_argument('-t', dest='test', action='store_true')
     parser.add_argument('-i', dest='ising', action='store_true')
+    cl_args = parser.parse_args()
     #Parallel stuff
-    # CORES = mp.cpu_count()
-    POOL = mp.Pool(1)
-    phantom_analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
+    # There are 28 cores
+    POOL = mp.Pool(8)
+    if cl_args.test:
+        analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
                         'mouse_kwargs': {'phantom':True},
                         'ramsey_kwargs' : {
                                             'n_iter': 2, 
@@ -126,7 +129,8 @@ if __name__ == '__main__':
                                         },
                         'num_trials' : 4,
                         }
-    mouse_analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
+    elif cl_args.mouse:
+        analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
                             'ramsey_kwargs' : {
                                                 'n_iter': 95, 
                                                 'n_pc': 0.8, 
@@ -140,27 +144,31 @@ if __name__ == '__main__':
                                             },
                             'num_trials' : 4,
                             }
-
-    ising_analysis_args={'output_dir' : '/home/brirry/galaxybrain/data/experiments/ising_better_fit',
-                    'ramsey_params' : {'n_iters' : 95, 'n_pc' : 0.8, 'pc_range': [0,0.1], 'f_range' : [0,0.01]},
-                    'num_trials' : 5,
-                    'ft_kwargs': {
-                                    'fs': 1,
-                                    'nperseg': 2000,
-                                    'noverlap': int(.8*2000)
-                                 },
-                    'fooof_kwargs': {
-                                        'es': {'return_params': [['aperiodic_params', 'exponent'],
-                                                                ['aperiodic_params', 'knee'],
-                                                                ['error'], # MAE
-                                                                ['aperiodic_params', 'offset']],
-                                        'fit_kwargs': {'aperiodic_mode': 'knee'}},
-                                    }
-                    }
+    elif cl_args.ising:
+        analysis_args={'output_dir' : '/home/brirry/galaxybrain/data/experiments/ising_better_fit',
+                       'ramsey_kwargs' : {'n_iters' : 95,
+                                          'n_pc' : 0.8,
+                                          'pc_range': [0,0.1],
+                                          'f_range' : [0,0.01],
+                                          'ft_kwargs': {
+                                                        'fs': 1,
+                                                        'nperseg': 2000,
+                                                        'noverlap': int(.8*2000)
+                                                    },
+                                          'fooof_kwargs': {
+                                                            'es': {'return_params': [['aperiodic_params', 'exponent'],
+                                                                                    ['aperiodic_params', 'knee'],
+                                                                                    ['error'], # MAE
+                                                                                    ['aperiodic_params', 'offset']],
+                                                            'fit_kwargs': {'aperiodic_mode': 'knee'}},
+                                                        }
+                                         },
+                        'num_trials' : 5,
+                        }
     
-    run_analysis(**phantom_analysis_args)
+    run_analysis(**analysis_args)
 
-    with open(f"{mouse_analysis_args['output_dir']}/analysis_args.json",'w') as f:
-        json.dump(mouse_analysis_args, f, indent=1)
+    with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
+        json.dump(analysis_args, f, indent=1)
 
 
