@@ -5,6 +5,8 @@ import sys, os
 import json
 import re
 
+from pathlib import Path
+here_dir = str(Path(__file__).parent.absolute())
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
@@ -140,7 +142,7 @@ class MouseData:
             See mouse_iter() for use case
         """
         
-        datafolder       = '../data/spikes/'
+        datafolder       = here_dir+'/../data/spikes'
         self.mouse_in    = mouse_in
         self.burn_in     = burn_in
         self.raster_dict = {}

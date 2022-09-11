@@ -146,6 +146,7 @@ if __name__ == '__main__':
                             }
     elif cl_args.ising:
         analysis_args={'output_dir' : '/home/brirry/galaxybrain/data/experiments/ising_better_fit',
+                        'data_type': 'ising',
                        'ramsey_kwargs' : {'n_iters' : 95,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.1],
