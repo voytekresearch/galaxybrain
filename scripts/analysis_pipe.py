@@ -1,3 +1,4 @@
+from unittest.util import strclass
 import numpy as np
 import sys, os
 import json
@@ -5,9 +6,9 @@ import h5py
 from pathlib import Path
 import argparse
 
-here = Path(__file__)
-sys.path.append(str(here.parent.absolute()))
-sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
+here_dir = Path(__file__).parent.absolute()
+sys.path.append(str(here_dir))
+sys.path.append(str(here_dir.parent.absolute()/'galaxybrain'))
 
 from data_utils import MouseData, shuffle_data
 import ramsey
@@ -82,7 +83,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
             distributed_compute(save_dir=f'{output_dir}/{mouse_name}')
     
     elif data_type == 'ising':
-        ising_h5 = h5py.File('/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/spikes/ising.hdf5', 'r')
+        ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
         for temp in ising_h5: #keys are str!
