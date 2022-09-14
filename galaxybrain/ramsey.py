@@ -16,9 +16,7 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 def fooofy(components, spectra, fit_range,
            group=True, 
            fit_kwargs={},
-           return_params=[['aperiodic_params', 'exponent'],
-                          ['error'], # MAE
-                          ['aperiodic_params', 'offset']], 
+           return_params='default', 
            ):
     """
     fit FOOOF model on given spectrum and return params
@@ -27,6 +25,10 @@ def fooofy(components, spectra, fit_range,
         fit_range: range for x axis of spectrum to fit
         group: whether to use FOOOFGroup or not
     """
+    if return_params == 'default':
+        return_params = [['aperiodic_params', 'exponent'],
+                          ['error'], # MAE
+                          ['aperiodic_params', 'offset']]
     if group:
         fg = FOOOFGroup(max_n_peaks=0, verbose=False, **fit_kwargs)
     else:
@@ -105,9 +107,11 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
         chan_powers_mat[i] = powers_chans
 
     e_axis = np.arange(1,n_pc+1)
-    es_fit   = fooofy(e_axis, evals_mat,      pc_range, fit_kwargs=fooof_kwargs.get('es', {}))
-    psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  fit_kwargs=fooof_kwargs.get('psd', {}))
-    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,it], f_range, fit_kwargs=fooof_kwargs.get('psd', {})) 
+
+    es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
+    es_fit   = fooofy(e_axis, evals_mat,      pc_range, **es_fooof_kwargs)
+    psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
+    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,it], f_range, **psd_fooof_kwargs) 
                                                         for it in range(subset_size)] # list comp here iterates over each neuron
     psd_fit2 = defaultdict(lambda: [])
     for d in psd_fit2_list:
@@ -132,7 +136,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     if data_type == 'mouse':
         subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
     elif data_type == 'ising':
-        subset_sizes = np.linspace(30, data.shape[1] - 10, 16, dtype=int)
+        subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int) #  - 10
         
 
     n           = len(subset_sizes)
@@ -178,7 +182,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
 
         for it in [1,2]: #summed and non summed
             stats_[f'pearson_r{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
-            stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+            stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
         
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
     return {'eigs': eigs, 

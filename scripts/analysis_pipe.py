@@ -1,11 +1,13 @@
-from unittest.util import strclass
 import numpy as np
+import pandas as pd
 import sys, os
 import json
 import h5py
 from pathlib import Path
 import argparse
 
+# debug
+import shutil
 here_dir = Path(__file__).parent.absolute()
 sys.path.append(str(here_dir))
 sys.path.append(str(here_dir.parent.absolute()/'galaxybrain'))
@@ -21,7 +23,7 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_type='mouse', shuffle=False):
+def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle=False):
     """
     output_dir: assumes you've made expNUM folder
     ramsey_kwargs: dict
@@ -30,7 +32,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
     data_type: mouse, or ising
     **This function refers to some variables declared below in __main__**
     """
-    
+    data_type = ramsey_kwargs.get('data_type', 'mouse')
     def distributed_compute(save_dir):
         """
         save_dir: dir, not including last subdir (e.g., region or temp)
@@ -68,8 +70,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
             parallel_args = [] # keep track of indices
             parallel_labels = [] # for going through results and saving data later
             for mouse_raster, region_name in mice_data.mouse_iter(mouse_name):
-                if not os.path.exists(f'{output_dir}/{mouse_name}/{region_name}'):
-                    os.makedirs(f'{output_dir}/{mouse_name}/{region_name}')
+                os.makedirs(f'{output_dir}/{mouse_name}/{region_name}')
 
                 if shuffle:
                     for s in range(shuffle[1]):
@@ -86,36 +87,47 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, data_ty
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
-        for temp in ising_h5: #keys are str!
-            os.makedirs(f'{output_dir}/{temp}')
-            tensor = np.array(ising_h5[temp]).reshape(tensor.shape[0], -1)
-            raster = tensor.reshape(tensor.shape[0], -1) # shape := (Time x N^2)
-            os.makedirs(f'{output_dir}/{temp}')
+        # DEBUG over iterable
+        for temp in ['2.27']:#list(ising_h5.keys())[:2]: #keys are str!
+            # debug (rmtree not safe)
+            try:
+                os.makedirs(f'{output_dir}/{temp}')
+            except FileExistsError:  
+                shutil.rmtree(f'{output_dir}/{temp}')
+                
+            tensor = np.array(ising_h5[temp])
+            raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
 
             if shuffle:
                 for s in range(shuffle[1]):
                     curr_raster = shuffle_data(raster, shuffle[0]) 
                     [parallel_args.append(curr_raster) for n in range(num_trials)]
-                    [parallel_labels.append((region_name, s)) for n in range(num_trials)]
+                    [parallel_labels.append((temp, s)) for n in range(num_trials)]
             else:
                 [parallel_args.append(raster) for n in range(num_trials)]
-                [parallel_labels.append((region_name, n)) for n in range(num_trials)]
-                    
-            distributed_compute(save_dir=output_dir)
+                [parallel_labels.append((temp, n)) for n in range(num_trials)]
+            
+            # DEBUG
+            ramsey.ramsey(data=raster, **ramsey_kwargs)
+            # distributed_compute(save_dir=output_dir)
 
             
 ### SCRIPT ###
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
-    parser.add_argument('-t', dest='test', action='store_true')
+    parser.add_argument('-t', dest='test',  action='store_true')
     parser.add_argument('-i', dest='ising', action='store_true')
     cl_args = parser.parse_args()
+
+    # DEBUG
+    cl_args.ising = True
     #Parallel stuff
     # There are 28 cores
-    POOL = mp.Pool(8)
+    NUM_CORES = 1    # DEBUG
+    POOL = mp.Pool(NUM_CORES)
     if cl_args.test:
-        analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
+        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),
                         'mouse_kwargs': {'phantom':True},
                         'ramsey_kwargs' : {
                                             'n_iter': 2, 
@@ -128,29 +140,30 @@ if __name__ == '__main__':
                                                             'noverlap': 120/2
                                                         }
                                         },
-                        'num_trials' : 4,
+                        'num_trials' : 1,
                         }
     elif cl_args.mouse:
-        analysis_args = {'output_dir' :  '/Users/brianbarry/Desktop/computing/personal/galaxybrain/data/experiments/TEST',#'../../../../projects/ps-voyteklab/brirry/data/experiments/04242022',
-                            'ramsey_kwargs' : {
-                                                'n_iter': 95, 
-                                                'n_pc': 0.8, 
-                                                'pc_range': [0, None],
-                                                'f_range': [0,0.4],
-                                                'ft_kwargs': {
-                                                                'fs'      : 1,
-                                                                'nperseg' : 120,
-                                                                'noverlap': 120/2
-                                                            }
-                                            },
-                            'num_trials' : 4,
-                            }
+        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),
+                        'ramsey_kwargs' : {
+                                            'n_iter': 95, 
+                                            'n_pc': 0.8, 
+                                            'pc_range': [0, None],
+                                            'f_range': [0,0.4],
+                                            'ft_kwargs': {
+                                                            'fs'      : 1,
+                                                            'nperseg' : 120,
+                                                            'noverlap': 120/2
+                                                        }
+                                        },
+                         'num_trials' : 4,
+                        }
+    # DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir' : '/home/brirry/galaxybrain/data/experiments/ising_better_fit',
-                        'data_type': 'ising',
-                       'ramsey_kwargs' : {'n_iters' : 95,
+        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
+                       'ramsey_kwargs' : {'data_type': 'ising',
+                                          'n_iter' : 3,
                                           'n_pc' : 0.8,
-                                          'pc_range': [0,0.1],
+                                          'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
                                           'ft_kwargs': {
                                                         'fs': 1,
@@ -162,10 +175,11 @@ if __name__ == '__main__':
                                                                                     ['aperiodic_params', 'knee'],
                                                                                     ['error'], # MAE
                                                                                     ['aperiodic_params', 'offset']],
-                                                            'fit_kwargs': {'aperiodic_mode': 'knee'}},
+                                                                    'fit_kwargs': {'aperiodic_mode': 'knee'}
+                                                            },
                                                         }
                                          },
-                        'num_trials' : 5,
+                        'num_trials' : 1,
                         }
     
     run_analysis(**analysis_args)
