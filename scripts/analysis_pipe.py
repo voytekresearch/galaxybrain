@@ -158,6 +158,7 @@ if __name__ == '__main__':
                          'num_trials' : 4,
                         }
     # DEBUG args
+    # TODO specify n_pc from notebook
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
