@@ -114,6 +114,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             
 ### SCRIPT ###
 if __name__ == '__main__':
+    DEBUG = True
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
     parser.add_argument('-t', dest='test',  action='store_true')
@@ -121,10 +123,13 @@ if __name__ == '__main__':
     cl_args = parser.parse_args()
 
     # DEBUG
-    cl_args.ising = True
+    if DEBUG:
+        cl_args.ising = True
+        NUM_CORES = 1    # DEBUG
+    else:
+        NUM_CORES = 8
     #Parallel stuff
     # There are 28 cores
-    NUM_CORES = 1    # DEBUG
     POOL = mp.Pool(NUM_CORES)
     if cl_args.test:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),

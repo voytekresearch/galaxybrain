@@ -74,12 +74,12 @@ def load_mouse_data(datafolder, i_m, return_type='binned', bin_width=0.01, smoot
         data, cluster_info.
     """
     mice = ['Krebs', 'Waksman', 'Robbins']
-    cluLocs = io.loadmat(datafolder+'cluLoc.mat', squeeze_me = True)
+    cluLocs = io.loadmat(datafolder+'/cluLoc.mat', squeeze_me = True)
     probe_id = cluLocs['iprobeAll']
     probe_loc = cluLocs['brainLocNameAll']
 
     # load data and cluster info
-    mouse_data = io.loadmat(datafolder+'spks/spks%s_Feb18.mat'%mice[i_m], squeeze_me = True)['spks']
+    mouse_data = io.loadmat(datafolder+'/spks/spks%s_Feb18.mat'%mice[i_m], squeeze_me = True)['spks']
     clu_info = pd.DataFrame(np.array([probe_id[i_m],probe_loc[i_m]]).T, columns=['probe', 'region'])
 
     print('Grabbing Spikes...')
