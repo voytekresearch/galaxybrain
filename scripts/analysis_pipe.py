@@ -86,8 +86,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
-        # DEBUG over iterable
-        for temp in ['2.27']:#list(ising_h5.keys())[:2]: #keys are str!
+        # DEBUG over low temps
+        for temp in list(ising_h5.keys())[:2]: #keys are str!
             # debug (rmtree not safe)
             try:
                 os.makedirs(f'{output_dir}/{temp}')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
-    parser.add_argument('-t', dest='test',  action='store_true')
+    parser.add_argument('-t', dest='test',  action='store_true') # test mouse
     parser.add_argument('-i', dest='ising', action='store_true')
     cl_args = parser.parse_args()
 

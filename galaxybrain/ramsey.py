@@ -164,7 +164,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
         elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
-        # can't fit if range is too small
+        # DEBUG can't fit if range is too small
         if curr_pc_range[1] < 3:
             continue
         #f_range conditions
@@ -183,8 +183,11 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             fit_results[measure][:,i] =  dat
 
         for it in [1,2]: #summed and non summed
-            stats_[f'pearson_r{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
-            stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+            try:
+                stats_[f'pearson_r{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+            except ValueError:
+                print(f"NaNs at iter: {i}")
         
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
     return {'eigs': eigs, 
