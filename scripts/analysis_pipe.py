@@ -42,7 +42,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                               kwds={'data' :_curr_raster, 
                                      **ramsey_kwargs}) 
                         for _curr_raster in parallel_args]
-        POOL.close()
         if shuffle:
             for i in np.arange(0,len(results), num_trials):
                 region_or_temp, s = parallel_labels[i][0], parallel_labels[i][1]
@@ -110,6 +109,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             # DEBUG
             ramsey.ramsey(data=raster, **ramsey_kwargs)
             # distributed_compute(save_dir=output_dir)
+            POOL.close()
+
 
             
 ### SCRIPT ###
@@ -148,7 +149,7 @@ if __name__ == '__main__':
                         'num_trials' : 1,
                         }
     elif cl_args.mouse:
-        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),
+        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
                         'ramsey_kwargs' : {
                                             'n_iter': 95, 
                                             'n_pc': 0.8, 

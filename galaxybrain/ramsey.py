@@ -164,7 +164,9 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
         elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
-
+        # can't fit if range is too small
+        if curr_pc_range[1] < 3:
+            continue
         #f_range conditions
         if isinstance(f_range[1], float):
             curr_f_range = f_range
