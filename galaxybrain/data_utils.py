@@ -2,8 +2,8 @@ import numpy as np
 from scipy import io, signal
 import pandas as pd
 import sys, os
+from collections import defaultdict
 import json
-import re
 
 from pathlib import Path
 here_dir = str(Path(__file__).parent.absolute())
@@ -202,43 +202,6 @@ class MouseData:
 ### Analysis result data handling ###
 #####################################
 
-def load_npz(file, kind, decomp_dict=None, one_time=False):
-    """
-    Load npz of the saved analysis data
-    file : str like f'../data/experiments/CP/ramsey_{i+1}.npz'
-    kind : str in ['mouse', 'mouse_old', 'sim', 'noise']
-
-    Values computed across iters `iter_keys` (go into `decomp_dict`)
-    Those that aren't: `one_time_keys`
-    """
-
-    if kind == 'mouse':
-        # these are keys that are sliced over trials
-        iter_keys     = ['pca_m', 'ft_m1', 'ft_m2', 'pearson_r1', 'spearman_rho1', 
-                         'pearson_p1', 'spearman_p1', 'pearson_r2', 'spearman_rho2', 
-                         'pearson_p2', 'spearman_p2', 'pca_b', 'ft_b1', 'ft_b2'] 
-        one_time_keys = ['eigs', 'pows', 'pca_er', 'pca_b', 'ft_er1', 'ft_b1', 'ft_er2', 'ft_b2']
-
-    elif kind == 'mouse_old': # "old" data format with different field names 
-        iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p'] # in the past r2 went into here??
-        one_time_keys = ['eigs', 'pows', 'space_r2', 'time_r2']
-
-    elif kind in ('sim', 'noise', 'mouse_shuffle'):
-        iter_keys     = ['pca_m', 'ft_m', 'pearson_r', 'spearman_rho', 'pearson_p', 'spearman_p']
-        one_time_keys = ['eigs', 'pows', 'space_er', 'time_er']
-
-    with np.load(file, allow_pickle=True) as data:
-        if one_time:
-            return {k : data[k] for k in one_time_keys }
-        
-        if len(decomp_dict) == 0: #initalize it if empty
-            decomp_dict = {k:[] for k in iter_keys} 
-
-        for k in iter_keys:
-            decomp_dict[k].append(data[k])
-        return decomp_dict
-
-
 def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     """
     loads, [optionally] plots analysis results
@@ -252,27 +215,20 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     """
     
     def format_data(f_prefix):
-        """reshape/average certain data across trials, rename keys"""
-        decomp_dict = {}
-        for i in range(n_loop):
-            fn = f'{f_prefix}/ramsey_{i+1}.npz'  # might be simpler to save just one file
-            decomp_dict = load_npz(fn, kind, decomp_dict)
-        
+        """load, reshape/average certain data across trials"""
+        one_time_keys = {'eigs', 'pows', 'es_error', 'es_offset', 
+                    'psd_error1', 'psd_offset1', 'psd_error2', 'psd_offset2'}
+        decomp_dict = defaultdict(lambda: [])
+        for i in range(1, n_loop+1):
+            with np.load(f'{f_prefix}/{i}.npz', allow_pickle=True) as data:
+                for k in set(data.files) - one_time_keys:
+                    decomp_dict[k].append(data[k])
+                other_spec_data = {k : data[k] for k in one_time_keys }
         decomp_dict = {k : np.array(decomp_dict[k]) for k in decomp_dict} # to access np methods
-        for k in list(decomp_dict): # avoid RuntimeError: dictionary changed size during iteration from .pop
+        for k in list(decomp_dict):
             # Average the slopes
-            if '_m' in k: 
+            if '_exponent' in k: 
                 decomp_dict[k] = decomp_dict[k].mean(0)
-            ## str substitution for more pragmatic label (TODO: rename it in data files instead)
-            if '_r' in k: # 'r' or 'rho'
-                ix = k.index('_') + 1
-                try: # get number '1' or '2' from key string
-                    k_new = k[:ix] + 'corr' + re.search('\d+', k)[0]
-                except:
-                    k_new = k[:ix] + 'corr'
-                decomp_dict[k_new] = decomp_dict.pop(k)
-        ## retrieve other values
-        other_spec_data = load_npz(fn, kind, one_time=True)
         return {**decomp_dict, **other_spec_data}
 
     data_dict = dict()
