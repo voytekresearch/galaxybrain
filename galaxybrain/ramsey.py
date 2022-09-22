@@ -183,8 +183,8 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
 
         for it in [1,2]: #summed and non summed
             try:
-                stats_[f'pearson_r{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
-                stats_[f'spearman_rho{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                stats_[f'pearson_corr{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
             except ValueError:
                 print(f"NaNs at iter: {i}")
         

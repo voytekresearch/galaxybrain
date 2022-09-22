@@ -190,9 +190,7 @@ if __name__ == '__main__':
                         'num_trials' : 1,
                         }
     
-    run_analysis(**analysis_args)
-
     with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
 
-
+    run_analysis(**analysis_args)
