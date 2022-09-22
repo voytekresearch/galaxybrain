@@ -131,7 +131,7 @@ def shuffle_data(data, axis):
     
 class MouseData:
     mice_names = list(MICE_META.keys())
-    def __init__(self, mouse_in=['krebs','robbins','waksman'], burn_in=20, phantom=False):
+    def __init__(self, mouse_in, burn_in=20, phantom=False):
         """
         Uses load_mouse_data to return a dictionary of mouse data and region info
         args:
@@ -280,14 +280,16 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     if analysis_args == None:
         with open(f'{dir_}/analysis_args.json','r') as f:
             analysis_args = json.load(f)
-    print(analysis_args['ramsey_params'])
+
+    
+    print(analysis_args['ramsey_kwargs'])
     if 'shuffle' in analysis_args and analysis_args.get('shuffle') != False:
         n_loop = analysis_args['shuffle'][1]
     else:
         n_loop = analysis_args['num_trials']
 
     if 'mouse' in kind: #"mouse" or "mouse_old"
-        for mouse in analysis_args['mouse_in']:
+        for mouse in analysis_args['mouse_kwargs']['mouse_in']:
             data_dict[mouse] = {}
             for region, count in MICE_META[mouse].items():
                 subset_sizes = np.linspace(30, count, 16, dtype=int)
@@ -310,6 +312,6 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
         ## since only one kind of noise, just one key
         data_dict['all'] = {'data':data, 'meta':meta} 
 
-    data_dict['meta'] = {**analysis_args['ramsey_params'], 'pc_range':[0,None]} # meta for all data
+    data_dict['meta'] = {**analysis_args['ramsey_kwargs'], 'pc_range':[0,None]} # meta for all data
     
     return data_dict

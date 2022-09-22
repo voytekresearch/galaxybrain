@@ -87,7 +87,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
         # DEBUG over low temps
-        for temp in list(ising_h5.keys())[:2]: #keys are str!
+        for temp in list(ising_h5.keys())[6:]: #keys are str # NOTE: power chans broken for indices 0...5
             # debug (rmtree not safe)
             try:
                 os.makedirs(f'{output_dir}/{temp}')
@@ -150,6 +150,7 @@ if __name__ == '__main__':
                         }
     elif cl_args.mouse:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
+                        'mouse_kwargs': {'mouse_in'  : ['robbins', 'waksman']},
                         'ramsey_kwargs' : {
                                             'n_iter': 95, 
                                             'n_pc': 0.8, 

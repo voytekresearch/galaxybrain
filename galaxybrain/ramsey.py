@@ -86,6 +86,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
                      }
     """
     freqs = np.fft.rfftfreq(ft_kwargs['nperseg'])
+    pcs   = np.arange(1,n_pc+1)
 
     evals_mat       = np.empty((n_iter, n_pc)) # n_iter * |evals|
     sum_powers_mat  = np.empty((n_iter, len(freqs)))
@@ -106,13 +107,11 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
         sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
 
-    e_axis = np.arange(1,n_pc+1)
-
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
-    es_fit   = fooofy(e_axis, evals_mat,      pc_range, **es_fooof_kwargs)
+    es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
     psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
-    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,it], f_range, **psd_fooof_kwargs) 
-                                                        for it in range(subset_size)] # list comp here iterates over each neuron
+    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], f_range, **psd_fooof_kwargs) 
+                                                        for chan in range(subset_size)] # list comp here iterates over each neuron
     psd_fit2 = defaultdict(lambda: [])
     for d in psd_fit2_list:
         for key, params in d.items():
