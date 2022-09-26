@@ -110,18 +110,24 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
     es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
     psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
-    psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], f_range, **psd_fooof_kwargs) 
+    include_psd_fit2 = True #DEBUG
+    try:
+        psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], f_range, **psd_fooof_kwargs) 
                                                         for chan in range(subset_size)] # list comp here iterates over each neuron
-    psd_fit2 = defaultdict(lambda: [])
-    for d in psd_fit2_list:
-        for key, params in d.items():
-            psd_fit2[key].append(params)
-    psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
+        psd_fit2 = defaultdict(lambda: [])
+        for d in psd_fit2_list:
+            for key, params in d.items():
+                psd_fit2[key].append(params)
+        psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
+    except Exception as e:
+        include_psd_fit2 = False
     
     spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
     fit_dict = {**{f'es_{k}'   :v for k,v in es_fit.items()}, # renaming keys for each measure
-                **{f'psd_{k}1':v for k,v in psd_fit1.items()},
-                **{f'psd_{k}2':v for k,v in psd_fit2.items()},}
+                **{f'psd_{k}1':v for k,v in psd_fit1.items()}}
+    if include_psd_fit2:
+        fit_dict = {**fit_dict, 
+                    **{f'psd_{k}2':v for k,v in psd_fit2.items()}}
 
     return spectra, fit_dict
 
@@ -137,7 +143,6 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     elif data_type == 'ising':
         subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int) #  - 10
         
-
     n           = len(subset_sizes)
     eigs        = []
     powers_sum  = []
@@ -183,10 +188,13 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
 
         for it in [1,2]: #summed and non summed
             try:
-                stats_[f'pearson_corr{it}'][i],    stats_[f'pearson_p{it}'][i]  = stats.pearsonr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
             except ValueError:
                 print(f"NaNs at iter: {i}")
+            except KeyError: # skip nosum because of 0s spec
+                print(f'0 specs at iter: {i}')
+
         
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
     return {'eigs': eigs, 

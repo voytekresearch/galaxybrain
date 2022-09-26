@@ -46,7 +46,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             for i in np.arange(0,len(results), num_trials):
                 region_or_temp, s = parallel_labels[i][0], parallel_labels[i][1]
                 curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
-                np.savez(f'{save_dir}/{region_or_temp}/ramsey_{s+1}', eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
+                np.savez(f'{save_dir}/{region_or_temp}/{s+1}', eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
                                                                     pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
                                                                     pca_m=curr_output[:,2].mean(0), pca_er=curr_output[:,3].mean(0), pca_b=curr_output[:,4].mean(0), 
                                                                     ft_m1=curr_output[:,5].mean(0), ft_er1=curr_output[:,6].mean(0), ft_b1=curr_output[:,7].mean(0), 
@@ -60,7 +60,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             for i in range(len(results)):
                 region_or_temp, tn = parallel_labels[i][0], parallel_labels[i][1]
                 curr_output = results[i]
-                np.savez(f'{save_dir}/{region_or_temp}/ramsey_{tn+1}', **curr_output)
+                np.savez(f'{save_dir}/{region_or_temp}/{tn+1}', **curr_output)
 
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
@@ -86,8 +86,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
-        # DEBUG over low temps
-        for temp in list(ising_h5.keys())[6:]: #keys are str # NOTE: power chans broken for indices 0...5
+        for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
             # debug (rmtree not safe)
             try:
                 os.makedirs(f'{output_dir}/{temp}')
@@ -107,15 +106,12 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                 [parallel_labels.append((temp, n)) for n in range(num_trials)]
             
             # DEBUG
-            ramsey.ramsey(data=raster, **ramsey_kwargs)
-            # distributed_compute(save_dir=output_dir)
-            POOL.close()
-
+            # ramsey.ramsey(data=raster, **ramsey_kwargs)
+            distributed_compute(save_dir=output_dir)
 
             
-### SCRIPT ###
 if __name__ == '__main__':
-    DEBUG = True
+    DEBUG = False
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
@@ -165,11 +161,10 @@ if __name__ == '__main__':
                          'num_trials' : 4,
                         }
     # DEBUG args
-    # TODO specify n_pc from notebook
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 3,
+                                          'n_iter' : 95,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
@@ -194,3 +189,4 @@ if __name__ == '__main__':
         json.dump(analysis_args, f, indent=1)
 
     run_analysis(**analysis_args)
+    POOL.close()

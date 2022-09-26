@@ -130,7 +130,7 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
     """
     Plot exponent distr over % of neurons
     data : data dictionary of standard format
-    key  : str in ('pca_m', 'ft_m1', 'ft_m2') 
+    key  : str in ('es_exponent', 'psd_exponent1', 'psd_exponent2') 
     kind : str in ('violin', 'hist', 'errorbar')
     # TODO (maybe) fill-between plot type
     *Note: originally done with kind == 'errorbar'
@@ -190,7 +190,7 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
             pltlabel(*labs)
 
     ## Exponent distributions
-    for (ip, exp), labs in zip(enumerate(['pca_m', 'ft_m'+dsuffix]), [['ES exponent \n at each subset size', '', 'Exponent'],
+    for (ip, exp), labs in zip(enumerate(['es_exponent', 'psd_exponent'+dsuffix]), [['ES exponent \n at each subset size', '', 'Exponent'],
                                                             ['PSD exponent \n at each subset size', '', 'Exponent']]):
         ax = fig.add_subplot(gs1[ip,1])
         exp_plot(data, exp, ax=ax)
@@ -329,18 +329,18 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
     """
     data : data_dict
     """
-    title_lu = {'pca_m':'ES exponent', 'ft_m':'PSD exponent'}
+    title_lu = {'es_exponent':'ES exponent', 'psd_exponent':'PSD exponent'}
     ckeys = _ckeys()
     fig = plt.figure(figsize=(9,4))
     for i, m in enumerate(mice):
         for r in data[m]:
             d = data[m][r]['data']
-            for pi, exp in enumerate(['pca_m', 'ft_m']):
+            for pi, exp in enumerate(['es_exponent', 'psd_exponent']):
                 plt.subplot(1,2,pi+1)
                 plt.plot(FRACTIONS, d[exp].mean(0), MARKERS[i]+'-', ms=10, color=ckeys[ALL_REGIONS.index(r)], alpha=0.6)
                 plt.xscale('log')
                 plt.ylabel(title_lu[exp])
-                if exp == 'ft_m': # TODO: shouldn't have to do this manually
+                if exp == 'psd_exponent': # TODO: shouldn't have to do this manually
                     plt.ylim([-.023,-0.006])
     
     for i_r, r in enumerate(ALL_REGIONS):
