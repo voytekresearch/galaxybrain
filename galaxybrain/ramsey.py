@@ -141,7 +141,8 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     if data_type == 'mouse':
         subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
     elif data_type == 'ising':
-        subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int) #  - 10
+        # DEBUG number subsets
+        subset_sizes = np.linspace(30, data.shape[1], 4, dtype=int) #  - 10
         
     n           = len(subset_sizes)
     eigs        = []
@@ -191,9 +192,9 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
                 stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
             except ValueError:
-                print(f"NaNs at iter: {i}")
+                print(f"NaNs at subset iter: {i}")
             except KeyError: # skip nosum because of 0s spec
-                print(f'0 specs at iter: {i}')
+                print(f'0 specs at subset iter: {i}')
 
         
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)

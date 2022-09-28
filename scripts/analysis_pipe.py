@@ -88,10 +88,10 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         parallel_labels = [] # for going through results and saving data later
         for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
             # debug (rmtree not safe)
-            try:
-                os.makedirs(f'{output_dir}/{temp}')
-            except FileExistsError:  
-                shutil.rmtree(f'{output_dir}/{temp}')
+            # try:
+            os.makedirs(f'{output_dir}/{temp}')
+            # except FileExistsError:  
+            #     shutil.rmtree(f'{output_dir}/{temp}')
                 
             tensor = np.array(ising_h5[temp])
             raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
@@ -111,7 +111,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
 
             
 if __name__ == '__main__':
-    DEBUG = False
+    DEBUG = True
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
@@ -160,11 +160,11 @@ if __name__ == '__main__':
                                         },
                          'num_trials' : 4,
                         }
-    # DEBUG args
+    # DEBUG args n_iter, num_trials
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 95,
+                                          'n_iter' : 3,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
