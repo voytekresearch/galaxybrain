@@ -61,7 +61,9 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                 region_or_temp, tn = parallel_labels[i][0], parallel_labels[i][1]
                 curr_output = results[i]
                 np.savez(f'{save_dir}/{region_or_temp}/{tn+1}', **curr_output)
+        return
 
+        
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
         for mouse_name in mice_data.mouse_in:
@@ -87,6 +89,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
         for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
+            print('==== TEMP ', temp, '====')
             # debug (rmtree not safe)
             # try:
             os.makedirs(f'{output_dir}/{temp}')
@@ -107,11 +110,11 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             
             # DEBUG
             # ramsey.ramsey(data=raster, **ramsey_kwargs)
-            distributed_compute(save_dir=output_dir)
+        distributed_compute(save_dir=output_dir)
 
             
 if __name__ == '__main__':
-    DEBUG = False
+    DEBUG = 1
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
@@ -162,9 +165,9 @@ if __name__ == '__main__':
                         }
     # DEBUG args n_iter, num_trials
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
+        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fitTEST'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 95,
+                                          'n_iter' : 3,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
