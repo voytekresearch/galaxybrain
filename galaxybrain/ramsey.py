@@ -11,8 +11,6 @@ import time # debug
 #
 import warnings
 warnings.filterwarnings("ignore")
-# DEBUG
-tdiff = lambda t: float(f'{time.time()-t:.1f}')
 # inside random_subset_decomp
 def fooofy(components, spectra, fit_range,
            group=True, 
@@ -99,10 +97,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
         subset = np.array(raster_curr.iloc[:,loc_array]) #currently converted to array for testing jit
 
         # decomposition in space
-        # DEBUG
-        pca_start = time.time()
         evals = pca(subset, n_pc)
-        print('        finish pca', tdiff(pca_start))
         # PCA_TIMES.append(tdiff(pca_start))
         evals_mat[i] = evals
 
@@ -112,7 +107,6 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
         sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
         
-    fooof_start = time.time()# DEBUG
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
     es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
     psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
@@ -147,7 +141,6 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     if data_type == 'mouse':
         subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
     elif data_type == 'ising':
-        # DEBUG number subsets
         subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int) #  - 10
         
     n           = len(subset_sizes)
@@ -155,12 +148,8 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     powers_sum  = []
     fit_results = defaultdict(lambda: np.empty((n_iter, n)))
     stats_      = defaultdict(lambda: np.empty(n))
-    print('data.shape: ',data.shape)
-    loop_start = time.time() # DEBUG
 
     for i, num in enumerate(subset_sizes):
-        subset_start = time.time() # DEBUG
-        print('*********\n    subset_size: ', num)
         #if at some subset size not enough pc's, default to biggest
         #default is using a proportion of that
 
@@ -180,10 +169,8 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
         # DEBUG can't fit if range is too small
         if curr_pc_range[1] < 3:
-            print('    skipping subset')
+            print(f'    skipping subset {num}')
             continue
-        print('    curr_pc_range: ', curr_pc_range)
-        print('    n_pc_curr: ', n_pc_curr)
 
         #f_range conditions
         if isinstance(f_range[1], float):
@@ -209,10 +196,6 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             except KeyError: # skip psd_exponent nosum because of 0s spec
                 print(f'0s spec at subset iter: {i}')
 
-        # DEBUG
-        print('    done with subset took', tdiff(subset_start), '\n')
-        # SUBSET_ITER_TIMES.append(tdiff(subset_start))
-    print('done with loop\n', tdiff(loop_start))
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
     return {'eigs': eigs, 
             'pows': powers_sum, 

@@ -63,7 +63,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                 np.savez(f'{save_dir}/{region_or_temp}/{tn+1}', **curr_output)
         return
 
-        
+
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
         for mouse_name in mice_data.mouse_in:
@@ -88,8 +88,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
+        print(list(ising_h5.keys()))
         for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
-            print('==== TEMP ', temp, '====')
             # debug (rmtree not safe)
             # try:
             os.makedirs(f'{output_dir}/{temp}')
@@ -108,13 +108,11 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                 [parallel_args.append(raster) for n in range(num_trials)]
                 [parallel_labels.append((temp, n)) for n in range(num_trials)]
             
-            # DEBUG
-            # ramsey.ramsey(data=raster, **ramsey_kwargs)
         distributed_compute(save_dir=output_dir)
 
             
 if __name__ == '__main__':
-    DEBUG = 1
+    DEBUG = False
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
@@ -122,7 +120,6 @@ if __name__ == '__main__':
     parser.add_argument('-i', dest='ising', action='store_true')
     cl_args = parser.parse_args()
 
-    # DEBUG
     if DEBUG:
         cl_args.ising = True
         NUM_CORES = 1    # DEBUG
@@ -163,11 +160,10 @@ if __name__ == '__main__':
                                         },
                          'num_trials' : 4,
                         }
-    # DEBUG args n_iter, num_trials
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fitTEST'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 3,
+                                          'n_iter' : 95,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
