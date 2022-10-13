@@ -7,8 +7,11 @@ from scipy import stats
 from neurodsp.spectral import compute_spectrum
 import time # debug
 # from numba import jit
-
-#
+here_dir = Path(__file__).parent.absolute()
+sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
+from logs import init_log
+import logging
+init_log()
 import warnings
 warnings.filterwarnings("ignore")
 # inside random_subset_decomp
@@ -169,7 +172,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
         # DEBUG can't fit if range is too small
         if curr_pc_range[1] < 3:
-            print(f'    skipping subset {num}')
+            logging.info(f'    skipping subset {num}')
             continue
 
         #f_range conditions
@@ -192,9 +195,9 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
                 stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
             except ValueError: # can't compute correlation
-                print(f"NaNs at subset iter: {i}")
+                logging.info(f"NaNs at subset iter: {i}")
             except KeyError: # skip psd_exponent nosum because of 0s spec
-                print(f'0s spec at subset iter: {i}')
+                logging.info(f'0s spec at subset iter: {i}')
 
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
     return {'eigs': eigs, 

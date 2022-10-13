@@ -5,21 +5,21 @@ import json
 import h5py
 from pathlib import Path
 import argparse
-
-# debug
+#DEBUG
 import shutil
+import sys
 here_dir = Path(__file__).parent.absolute()
 sys.path.append(str(here_dir))
 sys.path.append(str(here_dir.parent.absolute()/'galaxybrain'))
+sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
 
 from data_utils import MouseData, shuffle_data
 import ramsey
-
+from logs import init_log
+import logging
 import multiprocessing as mp
 
 import warnings
-import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
@@ -83,22 +83,21 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                     [parallel_labels.append((region_name, n)) for n in range(num_trials)]
                     
             distributed_compute(save_dir=f'{output_dir}/{mouse_name}')
-    
+    #DEBUG
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         parallel_args = [] # keep track of indices
         parallel_labels = [] # for going through results and saving data later
-        print(list(ising_h5.keys()))
+        logging.info(list(ising_h5.keys()))
         for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
-            # debug (rmtree not safe)
-            # try:
-            os.makedirs(f'{output_dir}/{temp}')
-            # except FileExistsError:  
-            #     shutil.rmtree(f'{output_dir}/{temp}')
+            # DEBUG (rmtree not safe)
+            try:
+                os.makedirs(f'{output_dir}/{temp}')
+            except FileExistsError:  
+                shutil.rmtree(f'{output_dir}/{temp}')
                 
             tensor = np.array(ising_h5[temp])
             raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
-
             if shuffle:
                 for s in range(shuffle[1]):
                     curr_raster = shuffle_data(raster, shuffle[0]) 
@@ -112,8 +111,9 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
 
             
 if __name__ == '__main__':
-    DEBUG = False
+    DEBUG = True
 
+    init_log()
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
     parser.add_argument('-t', dest='test',  action='store_true') # test mouse
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         cl_args.ising = True
         NUM_CORES = 1    # DEBUG
     else:
-        NUM_CORES = 8
+        NUM_CORES = 20
     #Parallel stuff
     # There are 28 cores
     POOL = mp.Pool(NUM_CORES)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
                          'num_trials' : 4,
                         }
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fitTEST'),
+        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
                                           'n_iter' : 95,
                                           'n_pc' : 0.8,
