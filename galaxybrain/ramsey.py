@@ -7,6 +7,8 @@ from scipy import stats
 from neurodsp.spectral import compute_spectrum
 import time # debug
 # from numba import jit
+from pathlib import Path
+import sys
 here_dir = Path(__file__).parent.absolute()
 sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
 from logs import init_log

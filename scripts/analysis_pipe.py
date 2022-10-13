@@ -38,10 +38,18 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         save_dir: dir, not including last subdir (e.g., region or temp)
         other vars are side effects
         """
-        results = [POOL.apply(ramsey.ramsey, 
+        # DEBUG loop vs list comp
+        # results = [POOL.apply(ramsey.ramsey, 
+        #                       kwds={'data' :_curr_raster, 
+        #                              **ramsey_kwargs}) 
+        #                 for _curr_raster in parallel_args]
+
+        results = []
+        for label, _curr_raster in zip(parallel_labels, parallel_args):
+            logging.info(label)
+            results.append(POOL.apply(ramsey.ramsey, 
                               kwds={'data' :_curr_raster, 
-                                     **ramsey_kwargs}) 
-                        for _curr_raster in parallel_args]
+                                     **ramsey_kwargs}))
         if shuffle:
             for i in np.arange(0,len(results), num_trials):
                 region_or_temp, s = parallel_labels[i][0], parallel_labels[i][1]
