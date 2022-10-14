@@ -6,7 +6,7 @@ def init_log():
     host = sp.check_output('hostname', shell=True).decode('utf-8').lower()
     if 'brian' in host:
         log_path = '/Users/brianbarry/Desktop/computing/personal/galaxybrain/logs/analysis.log'
-    elif 'tscc':
+    elif 'tscc' in host:
         log_path = '/home/brirry/logs/analysis.log'
     level = logging.DEBUG
 

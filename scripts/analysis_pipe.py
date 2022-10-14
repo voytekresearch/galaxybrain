@@ -119,7 +119,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
 
             
 if __name__ == '__main__':
-    DEBUG = True
+    DEBUG = False
 
     init_log()
     parser = argparse.ArgumentParser()
