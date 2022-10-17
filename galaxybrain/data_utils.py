@@ -170,6 +170,7 @@ class MouseData:
         """
         return single raster for mouse-region pair
         df shape: n_time x n_neuron
+        (decoupled from mouse_iter in case you want to use in a notebook for one dataset)
         """
         if mouse_name not in self.mouse_in:
             raise KeyError(f'{mouse_name} not loaded')
