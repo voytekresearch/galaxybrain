@@ -12,7 +12,8 @@ here_dir = Path(__file__).parent.absolute()
 sys.path.append(str(here_dir))
 sys.path.append(str(here_dir.parent.absolute()/'galaxybrain'))
 sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
-
+sys.path.append(str(here_dir.parent.absolute()/'ising'))
+from ising import tensor_to_raster
 from data_utils import MouseData, shuffle_data
 import ramsey
 from logs import init_log
@@ -25,71 +26,50 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle=False):
     """
-    output_dir: assumes you've made expNUM folder
     ramsey_kwargs: dict
-    burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb
+    burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb)
     shuffle = (axis, num_shuffles)
     data_type: mouse, or ising
-    **This function refers to some variables declared below in __main__**
     """
-    data_type = ramsey_kwargs.get('data_type', 'mouse')
 
+    
+
+    data_type = ramsey_kwargs.get('data_type', 'mouse')
+    parallel_args = [] # keep track of indices
+    parallel_labels = [] # for going through results and saving data later
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
-        for mouse_name in mice_data.mouse_in:
-            ### TODO : maybe move this outside and append mouse names to labels ###
-            parallel_args = [] # keep track of indices
-            parallel_labels = [] # for going through results and saving data later
-            for mouse_raster, region_name in mice_data.mouse_iter(mouse_name):
-                os.makedirs(f'{output_dir}/{mouse_name}/{region_name}')
-
-                if shuffle:
-                    for s in range(shuffle[1]):
-                        curr_raster = shuffle_data(mouse_raster, shuffle[0]) 
-                        [parallel_args.append(curr_raster) for n in range(num_trials)]
-                        [parallel_labels.append((region_name, s)) for n in range(num_trials)]
-                else:
-                    [parallel_args.append(mouse_raster) for n in range(num_trials)]
-                    [parallel_labels.append((region_name, n)) for n in range(num_trials)]
-                    
-            save_dir=f'{output_dir}/{mouse_name}'
-    #DEBUG
+        labels = mice_data.get_labels() # labels of form (mouse_name, region_name)
+        get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
-        parallel_args = [] # keep track of indices
-        parallel_labels = [] # for going through results and saving data later
-        logging.info(list(ising_h5.keys()))
-        for temp in list(ising_h5.keys()): #[6:]: #keys are str # NOTE: power chans broken for indices 0...5
-            # DEBUG (rmtree not safe)
-            try:
-                os.makedirs(f'{output_dir}/{temp}')
-            except FileExistsError:  
-                shutil.rmtree(f'{output_dir}/{temp}')
-                
-            tensor = np.array(ising_h5[temp])
-            raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
-            if shuffle:
-                for s in range(shuffle[1]):
-                    curr_raster = shuffle_data(raster, shuffle[0]) 
-                    [parallel_args.append(curr_raster) for n in range(num_trials)]
-                    [parallel_labels.append((temp, s)) for n in range(num_trials)]
-            else:
-                [parallel_args.append(raster) for n in range(num_trials)]
-                [parallel_labels.append((temp, n)) for n in range(num_trials)]
+        labels = list(ising_h5.keys()) # these are str temperatures
+        get_function = lambda label: tensor_to_raster(ising_h5[label])
+    
+    
+    for label in labels:
+        os.makedirs(f'{output_dir}/{label}')
+        curr_raster = get_function(label)
+        if shuffle:
+            for s in range(shuffle[1]):
+                curr_raster = shuffle_data(curr_raster, shuffle[0]) 
+                [parallel_args.append(curr_raster) for n in range(num_trials)]
+                [parallel_labels.append((label, s)) for n in range(num_trials)]
+        else:
+            [parallel_args.append(curr_raster) for n in range(num_trials)]
+            [parallel_labels.append((label, n)) for n in range(num_trials)]
             
-        save_dir=output_dir
 
-    results = []
+    results = [] #actually futures if using submit
     for label, _curr_raster in zip(parallel_labels, parallel_args):
         logging.info(label)
-        results.append(EXECUTOR.submit(ramsey.ramsey, 
-                            **{'data' :_curr_raster, 
-                                    **ramsey_kwargs}))
+        results.append(EXECUTOR.submit(ramsey.ramsey, **{'data' :_curr_raster, **ramsey_kwargs} ))
+    results = [f.result() for f in concurrent.futures.as_completed(results)]
     if shuffle:
         for i in np.arange(0,len(results), num_trials):
-            region_or_temp, s = parallel_labels[i][0], parallel_labels[i][1]
+            label, s = parallel_labels[i][0], parallel_labels[i][1]
             curr_output = np.array(results[i:i+num_trials]) #slice across trials to avg after
-            np.savez(f'{save_dir}/{region_or_temp}/{s+1}', eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
+            np.savez(f'{output_dir}/{label}/{s+1}', eigs=np.array([curr_output[:,0][i] for i in range(num_trials)]).mean(0), # this properly takes the mean over trials
                                                                 pows=np.array([curr_output[:,1][i] for i in range(num_trials)]).mean(0), # ^
                                                                 pca_m=curr_output[:,2].mean(0), pca_er=curr_output[:,3].mean(0), pca_b=curr_output[:,4].mean(0), 
                                                                 ft_m1=curr_output[:,5].mean(0), ft_er1=curr_output[:,6].mean(0), ft_b1=curr_output[:,7].mean(0), 
@@ -101,13 +81,13 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         
     else:
         for i in range(len(results)):
-            region_or_temp, tn = parallel_labels[i][0], parallel_labels[i][1]
+            label, tn = parallel_labels[i][0], parallel_labels[i][1]
             curr_output = results[i]
-            np.savez(f'{save_dir}/{region_or_temp}/{tn+1}', **curr_output)
+            np.savez(f'{output_dir}/{label}/{tn+1}', **curr_output)
 
             
 if __name__ == '__main__':
-    DEBUG = 1
+    DEBUG = 0
 
     init_log()
     parser = argparse.ArgumentParser()
@@ -118,7 +98,6 @@ if __name__ == '__main__':
 
     if DEBUG:
         cl_args.ising = True
-        NUM_CORES = 1    # DEBUG
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
@@ -176,8 +155,11 @@ if __name__ == '__main__':
                                          },
                         'num_trials' : 4,
                         }
-    
-    with open(f"{analysis_args['output_dir']}/analysis_args.json",'w') as f:
+    output_dir = analysis_args['output_dir']
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+    with open(f"{output_dir}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
 
     with concurrent.futures.ProcessPoolExecutor() as EXECUTOR:

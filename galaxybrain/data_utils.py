@@ -131,7 +131,7 @@ def shuffle_data(data, axis):
     
 class MouseData:
     mice_names = list(MICE_META.keys())
-    def __init__(self, mouse_in, burn_in=20, phantom=False):
+    def __init__(self, mouse_in=[], burn_in=20, phantom=False):
         """
         Uses load_mouse_data to return a dictionary of mouse data and region info
         args:
@@ -166,16 +166,24 @@ class MouseData:
             su_start_ind = len(region_labels)+1
             self.raster_dict[name] = (df_spk[df_spk.columns[su_start_ind:]], region_indices)
 
-    def get_spikes(self, mouse_name, region):
+    def get_labels(self):
+        for m in self.mouse_in:
+            for r in MICE_META[m]:
+                yield f'{m}_{r}'
+
+    def get_spikes(self, mouse_name=None, region=None, label=None):
         """
         return single raster for mouse-region pair
         df shape: n_time x n_neuron
+        label: input str like 'mousename_region' (used in some scripts)
         (decoupled from mouse_iter in case you want to use in a notebook for one dataset)
         """
-        if mouse_name not in self.mouse_in:
-            raise KeyError(f'{mouse_name} not loaded')
         if self.phantom:
             return self.dummy_data()
+        if label:
+            mouse_name, region = label.split('_')
+        if mouse_name not in self.mouse_in:
+            raise KeyError(f'{mouse_name} not loaded')
         ix = self.burn_in
         spike_df, region_idx = self.raster_dict[mouse_name]
         if region == 'all':
