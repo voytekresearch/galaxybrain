@@ -19,11 +19,11 @@ import ramsey
 from logs import init_log
 import logging
 import concurrent.futures
-
+from memory_profiler import profile #DEBUG
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-
+@profile #DEBUG
 def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle=False):
     """
     ramsey_kwargs: dict
@@ -31,8 +31,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
     shuffle = (axis, num_shuffles)
     data_type: mouse, or ising
     """
-
-    
 
     data_type = ramsey_kwargs.get('data_type', 'mouse')
     parallel_args = [] # keep track of indices
@@ -45,8 +43,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         labels = list(ising_h5.keys()) # these are str temperatures
         get_function = lambda label: tensor_to_raster(ising_h5[label])
-    
-    
+
     for label in labels:
         os.makedirs(f'{output_dir}/{label}')
         curr_raster = get_function(label)
@@ -59,10 +56,10 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
             [parallel_args.append(curr_raster) for n in range(num_trials)]
             [parallel_labels.append((label, n)) for n in range(num_trials)]
             
-
     results = [] #actually futures if using submit
     for label, _curr_raster in zip(parallel_labels, parallel_args):
         logging.info(label)
+
         results.append(EXECUTOR.submit(ramsey.ramsey, **{'data' :_curr_raster, **ramsey_kwargs} ))
     results = [f.result() for f in concurrent.futures.as_completed(results)]
     if shuffle:
@@ -87,7 +84,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
 
             
 if __name__ == '__main__':
-    DEBUG = 0
+    DEBUG = 1
 
     init_log()
     parser = argparse.ArgumentParser()
@@ -114,7 +111,7 @@ if __name__ == '__main__':
                                                             'noverlap': 120/2
                                                         }
                                         },
-                        'num_trials' : 1,
+                        'num_trials' : 100,
                         }
     elif cl_args.mouse:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
@@ -132,10 +129,11 @@ if __name__ == '__main__':
                                         },
                          'num_trials' : 4,
                         }
+    #DEBUG args
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 95,
+                                          'n_iter' : 3,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
@@ -153,7 +151,7 @@ if __name__ == '__main__':
                                                             },
                                                         }
                                          },
-                        'num_trials' : 4,
+                        'num_trials' : 1,
                         }
     output_dir = analysis_args['output_dir']
     if os.path.exists(output_dir):
@@ -161,6 +159,10 @@ if __name__ == '__main__':
     os.makedirs(output_dir)
     with open(f"{output_dir}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
-
+    
+    import time
+    start= time.perf_counter()
     with concurrent.futures.ProcessPoolExecutor() as EXECUTOR:
         run_analysis(**analysis_args)
+
+    print(time.perf_counter()-start)

@@ -9,4 +9,4 @@
 #PBS -m abe
 ROOT="/home/brirry/galaxybrain"
 
-python ${ROOT}/scripts/analysis_pipe.py -i
+python ${ROOT}/scripts/analysis_pipe.py -i >> /home/brirry/logs/analysis.log 2>&1
