@@ -103,25 +103,20 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
         subset = np.array(raster_curr.iloc[:,loc_array])
         return pca(subset, n_pc)
 
-    # evals = Parallel(n_jobs=cpu_count())(delayed(parallel_pca_task)() for _ in range(n_iter))
+    evals = Parallel(n_jobs=cpu_count())(delayed(parallel_pca_task)() for _ in range(n_iter))
     # evals = [parallel_pca_task() for _ in range(n_iter)]
     for i in range(n_iter):
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
         subset = np.array(raster_curr.iloc[:,loc_array]) #onverted to array for testing jit
 
-
-        # evals = pca(subset, n_pc)
-        # evals_mat[i] = evals[i]
-        
+        evals_mat[i] = evals[i]
         freqs, powers_sum, powers_chans = ft(subset, **ft_kwargs)
 
         sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
         
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
-    # es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
-    # DEBUG
-    es_fit = {'test':1}
+    es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
     psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
     include_psd_fit2 = True #DEBUG
     try:
