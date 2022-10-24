@@ -41,7 +41,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
-        labels = list(ising_h5.keys()) # these are str temperatures
+        # labels = list(ising_h5.keys()) # these are str temperatures
+        labels = ['2.27']
         get_function = lambda label: tensor_to_raster(ising_h5[label])
 
     for label in labels:
@@ -59,8 +60,8 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
     results = [] #actually futures if using submit
     for label, _curr_raster in zip(parallel_labels, parallel_args):
         logging.info(label)
-
         results.append(EXECUTOR.submit(ramsey.ramsey, **{'data' :_curr_raster, **ramsey_kwargs} ))
+        # results.append(ramsey.ramsey(**{'data' :_curr_raster, **ramsey_kwargs}))
     results = [f.result() for f in concurrent.futures.as_completed(results)]
     if shuffle:
         for i in np.arange(0,len(results), num_trials):
