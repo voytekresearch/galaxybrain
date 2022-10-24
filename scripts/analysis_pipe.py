@@ -23,7 +23,7 @@ from memory_profiler import profile #DEBUG
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-@profile #DEBUG
+#@profile #DEBUG
 def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle=False):
     """
     ramsey_kwargs: dict
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 3,
+                                          'n_iter' : 95,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
@@ -152,7 +152,7 @@ if __name__ == '__main__':
                                                             },
                                                         }
                                          },
-                        'num_trials' : 1,
+                        'num_trials' : 4,
                         }
     output_dir = analysis_args['output_dir']
     if os.path.exists(output_dir):

@@ -44,7 +44,7 @@ def fooofy(components, spectra, fit_range,
     return {p[-1]: fg.get_params(*p) 
                     for p in return_params}
 
-@profile
+#@profile
 def pca(data, n_pc=None):
     """
     Decomposition in space
@@ -56,7 +56,7 @@ def pca(data, n_pc=None):
 
     return evals
 
-@profile
+#@profile
 def ft(subset, **ft_kwargs):
     """
     Welch method over both summed and non summed neurons
@@ -81,7 +81,7 @@ def ft(subset, **ft_kwargs):
 
 
 #@jit(nopython=True) # jit not working because I think the data passed in has to be array
-@profile
+#@profile
 def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
     """
     returned data include 1 pca exponent and 2 PSD exponents
@@ -139,7 +139,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
 
     return spectra, fit_dict
 
-@profile
+#@profile
 def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse'):
     """Do random_subset_decomp over incrementing subset sizes
     slope dims: n_iter * amount of subset sizes
