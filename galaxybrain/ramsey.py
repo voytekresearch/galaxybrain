@@ -6,7 +6,7 @@ from fooof import FOOOFGroup, FOOOF
 from scipy import stats
 from neurodsp.spectral import compute_spectrum
 import time # debug
-# from numba import jit
+from joblib import Parallel, delayed, cpu_count
 from pathlib import Path
 import sys
 here_dir = Path(__file__).parent.absolute()
@@ -80,7 +80,6 @@ def ft(subset, **ft_kwargs):
     return freqs, powers_summed, powers_chans
 
 
-#@jit(nopython=True) # jit not working because I think the data passed in has to be array
 #@profile
 def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
     """
@@ -99,24 +98,30 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
     sum_powers_mat  = np.empty((n_iter, len(freqs)))
     chan_powers_mat = np.empty((n_iter, subset_size, len(freqs)))
 
-    for i in np.arange(n_iter):
-
+    def parallel_pca_task():
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
-        subset = np.array(raster_curr.iloc[:,loc_array]) #currently converted to array for testing jit
+        subset = np.array(raster_curr.iloc[:,loc_array])
+        return pca(subset, n_pc)
 
-        # decomposition in space
-        evals = pca(subset, n_pc)
-        # PCA_TIMES.append(tdiff(pca_start))
-        evals_mat[i] = evals
+    # evals = Parallel(n_jobs=cpu_count())(delayed(parallel_pca_task)() for _ in range(n_iter))
+    # evals = [parallel_pca_task() for _ in range(n_iter)]
+    for i in range(n_iter):
+        loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
+        subset = np.array(raster_curr.iloc[:,loc_array]) #onverted to array for testing jit
 
-        # decomposition in time
+
+        # evals = pca(subset, n_pc)
+        # evals_mat[i] = evals[i]
+        
         freqs, powers_sum, powers_chans = ft(subset, **ft_kwargs)
 
         sum_powers_mat[i]  = powers_sum
         chan_powers_mat[i] = powers_chans
         
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
-    es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
+    # es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
+    # DEBUG
+    es_fit = {'test':1}
     psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
     include_psd_fit2 = True #DEBUG
     try:
@@ -156,7 +161,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     powers_sum  = []
     fit_results = defaultdict(lambda: np.empty((n_iter, n)))
     stats_      = defaultdict(lambda: np.empty(n))
-
+    logging.info(f'working with {cpu_count()} processors')
     for i, num in enumerate(subset_sizes):
         #if at some subset size not enough pc's, default to biggest
         #default is using a proportion of that
@@ -174,7 +179,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             curr_pc_range = [0, int(min(.5*n_pc_curr, .25*max(subset_sizes*n_pc)))]
         elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
-            curr_pc_range = [pc_range[0],int(n_pc_curr*pc_frac)]
+            curr_pc_range = [pc_range[0], int(n_pc_curr*pc_frac)]
         # DEBUG can't fit if range is too small
         if curr_pc_range[1] < 3:
             logging.info(f'    skipping subset {num}')
@@ -185,9 +190,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
             curr_f_range = f_range
         elif f_range[1] == None:
             curr_f_range = None
-
         spectra_i, results_i = random_subset_decomp(data, num, n_iter, n_pc_curr, ft_kwargs, curr_pc_range, curr_f_range, fooof_kwargs)
-
         #append average across iterations
         eigs.append(spectra_i['evals'].mean(0)) 
         powers_sum.append(spectra_i['psd'].mean(0))
@@ -200,12 +203,11 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
                 stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
             except ValueError: # can't compute correlation
-                logging.info(f"NaNs at subset iter: {i}")
+                logging.info(f"NaNs at subset iter: {i}, num: {num}")
             except KeyError: # skip psd_exponent nosum because of 0s spec
-                logging.info(f'0s spec at subset iter: {i}')
+                logging.info(f'0s spec at subset iter: {i}, num: {num}')
 
     # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
-    print('returning stiuff!')
     return {'eigs': eigs, 
             'pows': powers_sum, 
             **fit_results, 

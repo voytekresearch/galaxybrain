@@ -33,8 +33,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
     """
 
     data_type = ramsey_kwargs.get('data_type', 'mouse')
-    parallel_args = [] # keep track of indices
-    parallel_labels = [] # for going through results and saving data later
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
         labels = mice_data.get_labels() # labels of form (mouse_name, region_name)
@@ -42,27 +40,28 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         # labels = list(ising_h5.keys()) # these are str temperatures
+        # DEBUG
         labels = ['2.27']
         get_function = lambda label: tensor_to_raster(ising_h5[label])
 
+
     for label in labels:
-        os.makedirs(f'{output_dir}/{label}')
-        curr_raster = get_function(label)
-        if shuffle:
-            for s in range(shuffle[1]):
-                curr_raster = shuffle_data(curr_raster, shuffle[0]) 
-                [parallel_args.append(curr_raster) for n in range(num_trials)]
-                [parallel_labels.append((label, s)) for n in range(num_trials)]
-        else:
-            [parallel_args.append(curr_raster) for n in range(num_trials)]
-            [parallel_labels.append((label, n)) for n in range(num_trials)]
-            
-    results = [] #actually futures if using submit
-    for label, _curr_raster in zip(parallel_labels, parallel_args):
         logging.info(label)
-        results.append(EXECUTOR.submit(ramsey.ramsey, **{'data' :_curr_raster, **ramsey_kwargs} ))
-        # results.append(ramsey.ramsey(**{'data' :_curr_raster, **ramsey_kwargs}))
-    results = [f.result() for f in concurrent.futures.as_completed(results)]
+        os.makedirs(f'{output_dir}/{label}')
+        for t in range(num_trials):
+            logging.info(f'trial {t}')
+            curr_raster = get_function(label)
+            if shuffle:
+                results = []
+                for s in range(shuffle[1]):
+                    curr_raster = shuffle_data(curr_raster, shuffle[0])
+                    results.append(ramsey.ramsey(data=curr_raster, **ramsey_kwargs))
+                #TODO save data
+            else:
+                results = ramsey.ramsey(data=curr_raster, **ramsey_kwargs)
+                np.savez(f'{output_dir}/{label}/{t+1}', **results)
+            
+    # TODO this is outdated
     if shuffle:
         for i in np.arange(0,len(results), num_trials):
             label, s = parallel_labels[i][0], parallel_labels[i][1]
@@ -76,12 +75,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
                                                                 pearson_p1=curr_output[:,12].mean(0), spearman_p1=curr_output[:,14].mean(0),
                                                                 pearson_r2=curr_output[:,15].mean(0), spearman_rho2=curr_output[:,17].mean(0), 
                                                                 pearson_p2=curr_output[:,16].mean(0), spearman_p2=curr_output[:,18].mean(0))
-        
-    else:
-        for i in range(len(results)):
-            label, tn = parallel_labels[i][0], parallel_labels[i][1]
-            curr_output = results[i]
-            np.savez(f'{output_dir}/{label}/{tn+1}', **curr_output)
 
             
 if __name__ == '__main__':
@@ -95,14 +88,14 @@ if __name__ == '__main__':
     cl_args = parser.parse_args()
 
     if DEBUG:
-        cl_args.ising = True
+        cl_args.test = True
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),
                         'mouse_kwargs': {'phantom':True},
                         'ramsey_kwargs' : {
-                                            'n_iter': 2, 
+                                            'n_iter': 5, 
                                             'n_pc': 0.8, 
                                             'pc_range': [0, None],
                                             'f_range': [0,0.4],
@@ -112,7 +105,7 @@ if __name__ == '__main__':
                                                             'noverlap': 120/2
                                                         }
                                         },
-                        'num_trials' : 100,
+                        'num_trials' : 5,
                         }
     elif cl_args.mouse:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
@@ -163,7 +156,6 @@ if __name__ == '__main__':
     
     import time
     start= time.perf_counter()
-    with concurrent.futures.ProcessPoolExecutor() as EXECUTOR:
-        run_analysis(**analysis_args)
+    run_analysis(**analysis_args)
 
     print(time.perf_counter()-start)
