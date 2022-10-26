@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q hotel
 #PBS -N "galaxybrain_ising"
-#PBS -l nodes=1:ppn=28
+#PBS -l nodes=1:ppn=25
 #PBS -l walltime=32:00:00
 #PBS -o /home/brirry/logs/out.log
 #PBS -e /home/brirry/logs/err.log

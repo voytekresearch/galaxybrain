@@ -128,6 +128,7 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
                 psd_fit2[key].append(params)
         psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
     except Exception as e:
+        logging.info(f'could not get sum spec at {subset_size}:\n{e}')
         include_psd_fit2 = False
 
     spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
@@ -160,7 +161,6 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     for i, num in enumerate(subset_sizes):
         #if at some subset size not enough pc's, default to biggest
         #default is using a proportion of that
-
         if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
             n_pc_curr = min(subset_sizes)
         elif isinstance(n_pc, int) and n_pc < num:
@@ -175,7 +175,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
         elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
             pc_frac = pc_range[1]
             curr_pc_range = [pc_range[0], int(n_pc_curr*pc_frac)]
-        # DEBUG can't fit if range is too small
+        # DEBUG can't fooof fit if range is too small
         if curr_pc_range[1] < 3:
             logging.info(f'    skipping subset {num}')
             continue
