@@ -264,11 +264,11 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
 
     elif kind == 'sim': #ising model
         N = analysis_args['N']
-        for t in analysis_args['temps']:
+        for t in next(os.walk(dir_))[1]:
             subset_sizes = np.linspace(30, N-10, 16, dtype=int)
             meta = {'subsetsizes':subset_sizes}
-            data = format_data(f'{dir_}/{t:.2f}')
-            data_dict[f'{t:.2f}'] = {'meta':meta, 'data':data}
+            data = format_data(f'{dir_}/{t}')
+            data_dict[t] = {'meta':meta, 'data':data}
             
     elif kind == 'noise': # gaussian noise
         subset_sizes = np.linspace(30, 1462, 16, dtype=int)

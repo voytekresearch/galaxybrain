@@ -355,7 +355,7 @@ def avg_exp_plot(data, mice=MICE_META.keys()):
 # Ising Model Plots 
 ~~~~~~~~~~~~~~~~~~~0
 
-TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r/cold to hot
+TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r (cold to hot)
 CRIT_T           = f'{2.27:.2f}' # as float
 CRIT_C           = 'k' 
 

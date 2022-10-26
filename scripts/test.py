@@ -1,27 +1,27 @@
 from joblib import Parallel, delayed, cpu_count
 import time
-from sklearn.decomposition import PCA
-import numpy as np
+from datetime import datetime
 
 
-def pca(data, n_pc=None):
-    """
-    Decomposition in space
-    """
-    if not isinstance(data, np.ndarray):
-        data = np.array(data)
-    pop_pca = PCA(n_pc).fit(data)
-    evals = pop_pca.explained_variance_ratio_
-
-    return evals
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+my_rank = comm.Get_rank()
+num_proc = comm.Get_size()
 
 
+def computation():
+    time.sleep(5)
+    return f'{datetime.now().strftime("%H:%M:%S")}'
 
-start= time.perf_counter()
-fake_data = np.random.poisson(1, size=(500, 100))
-def func():
-    print('doing pca!')
-    pca(fake_data)
 
-Parallel(n_jobs=5)(delayed(func)() for _ in range(10))
-print(time.perf_counter()-start)
+def function():
+    return Parallel(n_jobs=3)(delayed(computation)() for _ in range(3))
+
+
+if my_rank != 0:
+    comm.send(function(), dest=0)
+else:
+    for proc_id in range(1,num_proc):
+        print(comm.recv(source=proc_id))
+
+"""mpirun -np 4 python script.py"""
