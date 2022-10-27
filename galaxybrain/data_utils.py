@@ -265,7 +265,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     elif kind == 'sim': #ising model
         N = analysis_args['N']
         for t in next(os.walk(dir_))[1]:
-            subset_sizes = np.linspace(30, N-10, 16, dtype=int)
+            subset_sizes = np.linspace(30, N, 16, dtype=int) #used to be N-10
             meta = {'subsetsizes':subset_sizes}
             data = format_data(f'{dir_}/{t}')
             data_dict[t] = {'meta':meta, 'data':data}

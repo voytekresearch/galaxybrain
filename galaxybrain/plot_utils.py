@@ -152,16 +152,19 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
 
 def plot_all_measures(data, meta, kind='mouse', title=''):
     """
-    meta should have: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
+    data has keys 'data', 'meta'
+    meta is for all datasets and has keys: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
     kind: 'mouse' (includes sum & nonsum PSD data), 'mouse_old', or 'sim' (ising or shuffle)
     plot layout:
     [ ES  ]  [ subset size vs ES exponent  ]   [ correlation ]
     [ PSD ]  [ subset size vs PSD exponent ]
     """
-    subsetsizes = meta['subsetsizes']
+
+    subsetsizes = data['meta']['subsetsizes'] # since every sub data has its own meta
+    data = data['data']
     n_pc = meta['n_pc']
     n = len(subsetsizes)
-    dsuffix = '1' if kind == 'mouse' else ''
+    dsuffix = '1'
     ## Plot style
     fig=plt.figure(figsize=(19,8)) 
     subset_fractions = np.linspace(0,1,n)
@@ -181,7 +184,7 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
                 n_pc_curr = n_pc
             elif isinstance(n_pc, float):
                 n_pc_curr = int(n_pc*n_i)
-
+            print(spec)
             xvals = np.arange(1,n_pc_curr+1)/n_pc_curr if spec == 'eigs'\
             else np.arange(0,61/120, 1/120)
             # Eigenspectrum
