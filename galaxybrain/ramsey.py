@@ -74,10 +74,10 @@ def ft(subset, **ft_kwargs):
     if not isinstance(subset, np.ndarray):
         subset = np.array(subset)
     summed_neurons = subset.sum(axis= 1) # summing data for ft decomp.
-    freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs, method='welch') #powers_sum is an array
-    freqs, powers_chans  = compute_spectrum(subset.T,       **ft_kwargs, method='welch') #returns a matrix!
+    _freqs, powers_summed = compute_spectrum(summed_neurons, **ft_kwargs, method='welch') #powers_sum is an array
+    _freqs, powers_chans  = compute_spectrum(subset.T,       **ft_kwargs, method='welch') #returns a matrix!
 
-    return freqs, powers_summed, powers_chans
+    return powers_summed, powers_chans
 
 
 #@profile
@@ -98,22 +98,17 @@ def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_r
     sum_powers_mat  = np.empty((n_iter, len(freqs)))
     chan_powers_mat = np.empty((n_iter, subset_size, len(freqs)))
 
-    def parallel_pca_task():
+    def parallel_task():
         loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
-        subset = np.array(raster_curr.iloc[:,loc_array])
-        return pca(subset, n_pc)
+        subset = np.array(raster_curr.iloc[:,loc_array]) #converted to array for testing jit
+        return pca(subset, n_pc), ft(subset, **ft_kwargs)
 
-    evals = Parallel(n_jobs=cpu_count())(delayed(parallel_pca_task)() for _ in range(n_iter))
-    # evals = [parallel_pca_task() for _ in range(n_iter)]
+    evals, powers_sum, powers_chans = Parallel(n_jobs=cpu_count())(delayed(parallel_task)() for _ in range(n_iter))
+
     for i in range(n_iter):
-        loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
-        subset = np.array(raster_curr.iloc[:,loc_array]) #onverted to array for testing jit
-
         evals_mat[i] = evals[i]
-        freqs, powers_sum, powers_chans = ft(subset, **ft_kwargs)
-
-        sum_powers_mat[i]  = powers_sum
-        chan_powers_mat[i] = powers_chans
+        sum_powers_mat[i]  = powers_sum[i]
+        chan_powers_mat[i] = powers_chans[i]
         
     es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
     es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
@@ -147,10 +142,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     b: offsets
     returns: eigs, pows (2D)
             fit results and stats"""
-    if data_type == 'mouse':
-        subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
-    elif data_type == 'ising':
-        subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int) #  - 10
+    subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
         
     n           = len(subset_sizes)
     eigs        = []
@@ -159,14 +151,7 @@ def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, da
     stats_      = defaultdict(lambda: np.empty(n))
     logging.info(f'working with {cpu_count()} processors')
     for i, num in enumerate(subset_sizes):
-        #if at some subset size not enough pc's, default to biggest
-        #default is using a proportion of that
-        if n_pc == None: #does this still need to be None?  Will it ever be manually changed?
-            n_pc_curr = min(subset_sizes)
-        elif isinstance(n_pc, int) and n_pc < num:
-            n_pc_curr = n_pc
-        elif isinstance(n_pc, float):
-            n_pc_curr = int(n_pc*num)
+        n_pc_curr = int(n_pc*num)
 
         #write conditions for pc_range,  use a function, or outside of this
         # [0,None] for whole range, otherwise check if float for fraction

@@ -42,7 +42,7 @@ if __name__ == "__main__":
     cl_args = parser.parse_args()
     
     N_PC = 0.8
-    N_CORE = 3#cpu_count() # also number of sub iterations
+    N_CORE = cpu_count() # also number of sub iterations
     DATA = np.random.randint(0,2,size=(10000,4096))
 
     ### test runtime one time
@@ -52,14 +52,15 @@ if __name__ == "__main__":
         print(f'Working with {N_CORE} ppn')
         print(iter_computation())
     elif cl_args.mpi_and_joblib:
-        print(f'Working with {N_CORE} ppn')
         from mpi4py import MPI
 
         comm = MPI.COMM_WORLD
         my_rank = comm.Get_rank()
         num_proc = comm.Get_size()
+        print(f'Working with {N_CORE} ppn on node {my_rank}')
         if my_rank != 0:
             comm.send(iter_computation(), dest=0)
         else:
+            print(iter_computation())
             for proc_id in range(1,num_proc):
                 print(comm.recv(source=proc_id))
