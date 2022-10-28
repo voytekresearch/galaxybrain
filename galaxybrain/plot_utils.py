@@ -186,7 +186,7 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
                 n_pc_curr = int(n_pc*n_i)
             print(spec)
             xvals = np.arange(1,n_pc_curr+1)/n_pc_curr if spec == 'eigs'\
-            else np.arange(0,61/120, 1/120)
+                    else np.arange(0,61/120, 1/120)
             # Eigenspectrum
             ax.plot(xvals, data[spec][i]) #KEEP THIS LINE: proportion of PCs
             logaxes()
@@ -373,17 +373,19 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     data = {k : data[k] for k in temps} # filter
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
     colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
-    
+    DEBUG_i = 0
     for t, c in zip(data, colors):
         # conditionals for plot
         lw    =  4  if t==CRIT_T else 2
         alpha =  1  if t==CRIT_T else 0.9
         try:
             ax.plot(data[t]['data'][spec][subset_ix], color=c, lw=lw, alpha=alpha)
-        except:
+        except Exception as e:
+            if not DEBUG_i:
+                print(e)
             print(t, spec, subset_ix)
         logaxes()
-
+        DEBUG_i +=1
 
 def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     """
@@ -397,7 +399,8 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
         lw    =  4  if t == CRIT_T else 2
         alpha =  1  if t == CRIT_T else 0.9
         ax.plot(FRACTIONS, r, color=c, lw=lw, alpha=alpha)
-    plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
+    # DEBUG
+    # plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
     if colorbar:
         ftemps = list(map(float, temps)) #need float for colorbar
         cmap, norm = mpl.colors.from_levels_and_colors(ftemps, colors[1:] ) # weird indexing offset by 1

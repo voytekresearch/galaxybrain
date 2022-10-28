@@ -267,7 +267,11 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
         for t in next(os.walk(dir_))[1]:
             subset_sizes = np.linspace(30, N, 16, dtype=int) #used to be N-10
             meta = {'subsetsizes':subset_sizes}
-            data = format_data(f'{dir_}/{t}')
+            try:
+                data = format_data(f'{dir_}/{t}')
+            except KeyError: #psd_error2:
+                print(f'{t} doesn\'t have psd_error2')
+                continue
             data_dict[t] = {'meta':meta, 'data':data}
             
     elif kind == 'noise': # gaussian noise
