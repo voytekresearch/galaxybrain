@@ -25,7 +25,7 @@ def computation():
     pop_pca = pca.fit(d)
     evals = pop_pca.explained_variance_ratio_
     
-    duration = f'{time.perf_counter() - start:1.f}'
+    duration = f'{time.perf_counter() - start:.1f}'
     end_time = datetime.now().strftime("%H:%M:%S")
     return (f'{duration}s at {end_time}')
 
