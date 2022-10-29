@@ -169,7 +169,8 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
     fig=plt.figure(figsize=(19,8)) 
     subset_fractions = np.linspace(0,1,n)
     cmap = plt.cm.cool(subset_fractions)
-    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap)
+    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap) # TODO bad pattern because this changes properties globally
+    # TODO maybe reset this at end of function?
 
     gs = GridSpec(2,3, width_ratios=[1,1,4], wspace=.8) #
     gs1 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[:,:2], hspace=0.5, wspace=0.3)
@@ -401,7 +402,7 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
         ax.plot(FRACTIONS, r, color=c, lw=lw, alpha=alpha)
     # DEBUG
     # plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
-    if colorbar:
+    if colorbar: #TODO ValueError: bins must be monotonically increasing or decreasing
         ftemps = list(map(float, temps)) #need float for colorbar
         cmap, norm = mpl.colors.from_levels_and_colors(ftemps, colors[1:] ) # weird indexing offset by 1
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)

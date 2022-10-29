@@ -44,7 +44,7 @@ def fooofy(components, spectra, fit_range,
     return {p[-1]: fg.get_params(*p) 
                     for p in return_params}
 
-#@profile
+
 def pca(data, n_pc=None):
     """
     Decomposition in space
@@ -56,7 +56,7 @@ def pca(data, n_pc=None):
 
     return evals
 
-#@profile
+
 def ft(subset, **ft_kwargs):
     """
     Welch method over both summed and non summed neurons
@@ -80,115 +80,122 @@ def ft(subset, **ft_kwargs):
     return powers_summed, powers_chans
 
 
-#@profile
-def random_subset_decomp(raster_curr, subset_size, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
-    """
-    returned data include 1 pca exponent and 2 PSD exponents
-    fooof_kwargs = { 'es' : {
-                        'return_params': [...],
-                        'fit_kwargs': {...}
+class Ramsey:
+    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
+        """
+        f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
+        """
+        self.data = data
+        self.n_iter = n_iter
+        self.n_pc = n_pc
+        self.ft_kwargs = ft_kwargs
+        self.pc_range = pc_range
+        self.f_range = f_range
+        self.fooof_kwargs = fooof_kwargs
+
+
+    def subset_iter(self):
+        """Do random_subset_decomp over incrementing subset sizes
+        slope dims: n_iter * amount of subset sizes
+        b: offsets
+        returns: eigs, pows (2D)
+        fit results and stats
+        """
+        subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
+        eigs        = []
+        powers_sum  = []
+        n_units     = len(subset_sizes)
+        fit_results = defaultdict(lambda: np.empty((self.n_iter, n_units)))
+        stats_      = defaultdict(lambda: np.empty(n_units))
+
+        logging.info(f'working with {cpu_count()} processors')
+        for i, num in enumerate(subset_sizes):
+            n_pc_curr = int(self.n_pc*num)
+
+            # [0,None] for whole range, otherwise check if float for fraction
+            if self.pc_range == [0,None]:
+                pc_range_curr = [0, int(min(.5*n_pc_curr, .25*max(subset_sizes*self.n_pc)))]
+            elif isinstance(self.pc_range[1], float): # cut up to percent
+                pc_range_curr = [self.pc_range[0], int(n_pc_curr*self.pc_range[1])]
+            # DEBUG can't fooof fit if range is too small
+            if pc_range_curr[1] < 3:
+                logging.info(f'    skipping subset {num}')
+                continue
+
+            spectra_i, results_i = self.random_subset_decomp(subset_size=num, n_pc_sub=n_pc_curr, pc_range_sub=pc_range_curr)
+            #append average across iterations
+            eigs.append(spectra_i['evals'].mean(0)) 
+            powers_sum.append(spectra_i['psd'].mean(0))
+
+            for measure, dat in results_i.items():
+                fit_results[measure][:,i] =  dat
+
+            for it in [1,2]: #summed and non summed
+                try:
+                    stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                    stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
+                except ValueError: # can't compute correlation
+                    logging.info(f"NaNs at subset iter: {i}, num: {num}")
+                except KeyError: # skip psd_exponent nosum because of 0s spec
+                    logging.info(f'0s spec at subset iter: {i}, num: {num}')
+
+        # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
+        return {'eigs': eigs, 
+                'pows': powers_sum, 
+                **fit_results, 
+                **stats_}
+
+
+    def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
+        """
+        returned data include 1 pca exponent and 2 PSD exponents
+        fooof_kwargs = { 'es' : {
+                            'return_params': [...],
+                            'fit_kwargs': {...}
+                            }
+                        'psd': SAME^
                         }
-                     'psd': SAME^
-                     }
-    """
-    freqs = np.fft.rfftfreq(ft_kwargs['nperseg'])
-    pcs   = np.arange(1,n_pc+1)
+        """
+        freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
+        pcs   = np.arange(1,n_pc_sub+1)
 
-    evals_mat       = np.empty((n_iter, n_pc)) # n_iter * |evals|
-    sum_powers_mat  = np.empty((n_iter, len(freqs)))
-    chan_powers_mat = np.empty((n_iter, subset_size, len(freqs)))
+        evals_mat       = np.empty((self.n_iter, n_pc_sub)) # n_iter * |evals|
+        sum_powers_mat  = np.empty((self.n_iter, len(freqs)))
+        chan_powers_mat = np.empty((self.n_iter, subset_size, len(freqs)))
 
-    def parallel_task():
-        loc_array = np.sort(np.random.choice(raster_curr.shape[1], subset_size, replace=False))
-        subset = np.array(raster_curr.iloc[:,loc_array]) #converted to array for testing jit
-        return pca(subset, n_pc), ft(subset, **ft_kwargs)
+        def parallel_task():
+            loc_array = np.sort(np.random.choice(self.data.shape[1], subset_size, replace=False))
+            subset = np.array(self.data.iloc[:,loc_array]) #converted to array for testing jit
+            return pca(subset, n_pc_sub), *ft(subset, **self.ft_kwargs)
 
-    evals, powers_sum, powers_chans = Parallel(n_jobs=cpu_count())(delayed(parallel_task)() for _ in range(n_iter))
+        results = Parallel(n_jobs=cpu_count())(delayed(parallel_task)() for _ in range(self.n_iter))
+        evals, powers_sum, powers_chans = list(zip(*results))
+        for i in range(self.n_iter):
+            evals_mat[i] = evals[i]
+            sum_powers_mat[i]  = powers_sum[i]
+            chan_powers_mat[i] = powers_chans[i]
+            
+        es_fooof_kwargs, psd_fooof_kwargs = self.fooof_kwargs.get('es', {}), self.fooof_kwargs.get('psd', {})
+        es_fit   = fooofy(pcs, evals_mat,      pc_range_sub, **es_fooof_kwargs)
+        psd_fit1 = fooofy(freqs,  sum_powers_mat, self.f_range,  **psd_fooof_kwargs)
+        include_psd_fit2 = True #DEBUG
+        try:
+            psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], self.f_range, **psd_fooof_kwargs) 
+                                                            for chan in range(subset_size)] # list comp here iterates over each neuron
+            psd_fit2 = defaultdict(lambda: [])
+            for d in psd_fit2_list:
+                for key, params in d.items():
+                    psd_fit2[key].append(params)
+            psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
+        except Exception as e:
+            logging.info(f'could not get sum spec at {subset_size}')
+            include_psd_fit2 = False
 
-    for i in range(n_iter):
-        evals_mat[i] = evals[i]
-        sum_powers_mat[i]  = powers_sum[i]
-        chan_powers_mat[i] = powers_chans[i]
-        
-    es_fooof_kwargs, psd_fooof_kwargs = fooof_kwargs.get('es', {}), fooof_kwargs.get('psd', {})
-    es_fit   = fooofy(pcs, evals_mat,      pc_range, **es_fooof_kwargs)
-    psd_fit1 = fooofy(freqs,  sum_powers_mat, f_range,  **psd_fooof_kwargs)
-    include_psd_fit2 = True #DEBUG
-    try:
-        psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], f_range, **psd_fooof_kwargs) 
-                                                        for chan in range(subset_size)] # list comp here iterates over each neuron
-        psd_fit2 = defaultdict(lambda: [])
-        for d in psd_fit2_list:
-            for key, params in d.items():
-                psd_fit2[key].append(params)
-        psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
-    except Exception as e:
-        logging.info(f'could not get sum spec at {subset_size}:\n{e}')
-        include_psd_fit2 = False
+        spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
+        fit_dict = {**{f'es_{k}'   :v for k,v in es_fit.items()}, # renaming keys for each measure
+                    **{f'psd_{k}1':v for k,v in psd_fit1.items()}}
+        if include_psd_fit2:
+            fit_dict = {**fit_dict, 
+                        **{f'psd_{k}2':v for k,v in psd_fit2.items()}}
 
-    spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
-    fit_dict = {**{f'es_{k}'   :v for k,v in es_fit.items()}, # renaming keys for each measure
-                **{f'psd_{k}1':v for k,v in psd_fit1.items()}}
-    if include_psd_fit2:
-        fit_dict = {**fit_dict, 
-                    **{f'psd_{k}2':v for k,v in psd_fit2.items()}}
-
-    return spectra, fit_dict
-
-#@profile
-def ramsey(data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse'):
-    """Do random_subset_decomp over incrementing subset sizes
-    slope dims: n_iter * amount of subset sizes
-    b: offsets
-    returns: eigs, pows (2D)
-            fit results and stats"""
-    subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
-        
-    n           = len(subset_sizes)
-    eigs        = []
-    powers_sum  = []
-    fit_results = defaultdict(lambda: np.empty((n_iter, n)))
-    stats_      = defaultdict(lambda: np.empty(n))
-    logging.info(f'working with {cpu_count()} processors')
-    for i, num in enumerate(subset_sizes):
-        n_pc_curr = int(n_pc*num)
-
-        #write conditions for pc_range,  use a function, or outside of this
-        # [0,None] for whole range, otherwise check if float for fraction
-        if pc_range == [0,None]:
-            curr_pc_range = [0, int(min(.5*n_pc_curr, .25*max(subset_sizes*n_pc)))]
-        elif isinstance(pc_range[1], float): #if second element of pc_range is float, it is a percentage of pc's
-            pc_frac = pc_range[1]
-            curr_pc_range = [pc_range[0], int(n_pc_curr*pc_frac)]
-        # DEBUG can't fooof fit if range is too small
-        if curr_pc_range[1] < 3:
-            logging.info(f'    skipping subset {num}')
-            continue
-
-        #f_range conditions
-        if isinstance(f_range[1], float):
-            curr_f_range = f_range
-        elif f_range[1] == None:
-            curr_f_range = None
-        spectra_i, results_i = random_subset_decomp(data, num, n_iter, n_pc_curr, ft_kwargs, curr_pc_range, curr_f_range, fooof_kwargs)
-        #append average across iterations
-        eigs.append(spectra_i['evals'].mean(0)) 
-        powers_sum.append(spectra_i['psd'].mean(0))
-
-        for measure, dat in results_i.items():
-            fit_results[measure][:,i] =  dat
-
-        for it in [1,2]: #summed and non summed
-            try:
-                stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
-                stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
-            except ValueError: # can't compute correlation
-                logging.info(f"NaNs at subset iter: {i}, num: {num}")
-            except KeyError: # skip psd_exponent nosum because of 0s spec
-                logging.info(f'0s spec at subset iter: {i}, num: {num}')
-
-    # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
-    return {'eigs': eigs, 
-            'pows': powers_sum, 
-            **fit_results, 
-            **stats_}
+        return spectra, fit_dict
