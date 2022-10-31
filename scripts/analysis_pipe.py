@@ -165,8 +165,9 @@ if __name__ == '__main__':
                         'data_type': 'ising',
                         }
     output_dir = analysis_args['output_dir']
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
+    if not cl_args.mpi:
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
     os.makedirs(output_dir)
     with open(f"{output_dir}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
