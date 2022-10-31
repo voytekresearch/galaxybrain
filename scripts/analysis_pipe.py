@@ -24,7 +24,7 @@ import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 #@profile #DEBUG
-def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle=False):
+def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False):
     """
     ramsey_kwargs: dict
     burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb)
@@ -32,7 +32,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
     data_type: mouse, or ising
     """
 
-    data_type = ramsey_kwargs.get('data_type', 'mouse')
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
         labels = mice_data.get_labels() # labels of form (mouse_name, region_name)
@@ -88,7 +87,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
 
             
 if __name__ == '__main__':
-    DEBUG = 0
+    DEBUG = 1
 
     init_log()
     parser = argparse.ArgumentParser()
@@ -106,7 +105,7 @@ if __name__ == '__main__':
         MY_RANK = COMM.Get_rank()
         NUM_TRIAL = COMM.Get_size()
     if DEBUG:
-        cl_args.test = True
+        cl_args.ising = True
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
@@ -144,8 +143,7 @@ if __name__ == '__main__':
     #DEBUG args
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
-                       'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 10,
+                       'ramsey_kwargs' : {'n_iter' : 10,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
@@ -164,6 +162,7 @@ if __name__ == '__main__':
                                                         }
                                          },
                         'num_trials' : 4,
+                        'data_type': 'ising',
                         }
     output_dir = analysis_args['output_dir']
     if os.path.exists(output_dir):

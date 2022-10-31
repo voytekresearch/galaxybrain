@@ -86,7 +86,8 @@ def tensor_to_raster(tensor, keep=None):
     """convert NxNxT tensor into TxN^2 raster"""
     if not isinstance(tensor, np.ndarray): # might be h5py file
         tensor = np.array(tensor)
-    raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
+    raster = tensor.reshape(tensor.shape[0], -1)
     if keep:
         raster = raster[:,:keep]
+    raster = pd.DataFrame(raster) # shape := (Time x N^2)
     return raster
