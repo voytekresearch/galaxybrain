@@ -42,8 +42,9 @@ if __name__ == "__main__":
     cl_args = parser.parse_args()
     
     N_PC = 0.8
-    N_CORE = cpu_count() # also number of sub iterations
-    DATA = np.random.randint(0,2,size=(10000,4096))
+    L, W = 10000, int(4096/2) #10000, 4096
+    N_CORE = 3 #cpu_count() # also number of sub iterations
+    DATA = np.random.randint(0,2,size=(L,W))
 
     ### test runtime one time
     if cl_args.serial:
