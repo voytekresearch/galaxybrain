@@ -11,7 +11,7 @@
 ROOT="/home/brirry/galaxybrain"
 
 # python ${ROOT}/scripts/analysis_pipe.py -i >> /home/brirry/logs/analysis.log 2>&1
-exp_dir=/home/brirry/galaxybrain/data/experiments/ising_better_fit # this should be an arg to avoid repetition
+exp_dir=${ROOT}/data/experiments/ising_better_fit # this should be an arg to avoid repetition
 rm -rf $exp_dir
 mkdir $exp_dir
 mpirun -v -machinefile $PBS_NODEFILE -np 4 --map-by ppr:1:node python ${ROOT}/scripts/analysis_pipe.py -i -p >> /home/brirry/logs/analysis.log 2>&1

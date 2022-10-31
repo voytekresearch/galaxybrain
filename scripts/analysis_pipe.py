@@ -6,7 +6,6 @@ import h5py
 from pathlib import Path
 import argparse
 #DEBUG
-import shutil
 import sys
 here_dir = Path(__file__).parent.absolute()
 sys.path.append(str(here_dir))
@@ -18,7 +17,6 @@ from data_utils import MouseData, shuffle_data
 import ramsey
 from logs import init_log
 import logging
-import concurrent.futures
 from memory_profiler import profile #DEBUG
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
@@ -58,7 +56,10 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
 
     for label in labels:
         logging.info(label)
-        os.makedirs(f'{output_dir}/{label}')
+        try:
+            os.makedirs(f'{output_dir}/{label}')
+        except FileExistsError:
+            pass
         if cl_args.mpi:
             if MY_RANK != 0: # maps to trial number
                 COMM.send(trial_task(t=MY_RANK))
