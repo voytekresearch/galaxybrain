@@ -41,7 +41,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, mouse_kwargs={}, shuffle
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         # DEBUG
         labels = list(ising_h5.keys())[4:-4] # these are str temperatures
-        get_function = lambda label: tensor_to_raster(ising_h5[label])
+        get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
 
 
     def trial_task(t):
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     elif cl_args.ising:
         analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
                        'ramsey_kwargs' : {'data_type': 'ising',
-                                          'n_iter' : 25,
+                                          'n_iter' : 10,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],

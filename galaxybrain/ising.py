@@ -82,9 +82,11 @@ def sim_and_save(path, temps, **ising_kwargs):
             f.create_dataset(f'{temp:.2f}', data=data, dtype='i')
 
 
-def tensor_to_raster(tensor):
+def tensor_to_raster(tensor, keep=None):
     """convert NxNxT tensor into TxN^2 raster"""
     if not isinstance(tensor, np.ndarray): # might be h5py file
         tensor = np.array(tensor)
     raster = pd.DataFrame(tensor.reshape(tensor.shape[0], -1)) # shape := (Time x N^2)
+    if keep:
+        raster = raster[:,:keep]
     return raster
