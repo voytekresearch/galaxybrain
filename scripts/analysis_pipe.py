@@ -62,7 +62,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
             pass
         if cl_args.mpi:
             if MY_RANK != 0: # maps to trial number
-                COMM.send(trial_task(t=MY_RANK))
+                COMM.send(trial_task(t=MY_RANK), dest=0)
             else:
                 trial_task(t=MY_RANK)
                 for t in range(1, NUM_TRIAL):
