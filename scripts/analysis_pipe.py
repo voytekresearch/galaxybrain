@@ -123,10 +123,11 @@ if __name__ == '__main__':
                                                         }
                                         },
                         'num_trials' : 5,
+                        'data_type': 'mouse',
                         }
     elif cl_args.mouse:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
-                        'mouse_kwargs': {'mouse_in'  : ['krebs']},
+                        'mouse_kwargs': {'mouse_in'  : ['waksman']},
                         'ramsey_kwargs' : {
                                             'n_iter': 95, 
                                             'n_pc': 0.8, 
@@ -139,6 +140,7 @@ if __name__ == '__main__':
                                                         }
                                         },
                          'num_trials' : 4,
+                        'data_type': 'mouse',
                         }
     #DEBUG args
     elif cl_args.ising:
