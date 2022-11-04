@@ -388,6 +388,7 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
         logaxes()
         DEBUG_i +=1
 
+
 def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     """
     Plot % sampled vs a measure (data_key) over multiple temperatures

@@ -17,7 +17,6 @@ from data_utils import MouseData, shuffle_data
 import ramsey
 from logs import init_log
 import logging
-from memory_profiler import profile #DEBUG
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
@@ -37,7 +36,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         # DEBUG
-        labels = list(ising_h5.keys())[4:-4] # these are str temperatures
+        labels = ['2.27'] #list(ising_h5.keys())[4:-4] # these are str temperatures
         get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
 
 
@@ -127,7 +126,7 @@ if __name__ == '__main__':
                         }
     elif cl_args.mouse:
         analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
-                        'mouse_kwargs': {'mouse_in'  : ['robbins', 'waksman']},
+                        'mouse_kwargs': {'mouse_in'  : ['krebs']},
                         'ramsey_kwargs' : {
                                             'n_iter': 95, 
                                             'n_pc': 0.8, 
@@ -143,8 +142,8 @@ if __name__ == '__main__':
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_better_fit'),
-                       'ramsey_kwargs' : {'n_iter' : 10,
+        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_test'),
+                       'ramsey_kwargs' : {'n_iter' : 6,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.01],
                                           'f_range' : [0,0.01],
@@ -162,7 +161,7 @@ if __name__ == '__main__':
                                                             },
                                                         }
                                          },
-                        'num_trials' : 4,
+                        'num_trials' : 1,
                         'data_type': 'ising',
                         }
     output_dir = analysis_args['output_dir']

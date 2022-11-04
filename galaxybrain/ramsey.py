@@ -17,7 +17,6 @@ init_log()
 import warnings
 warnings.filterwarnings("ignore")
 
-from memory_profiler import profile #DEBUG
 
 def fooofy(components, spectra, fit_range,
            group=True, 
@@ -84,6 +83,12 @@ class Ramsey:
     def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
         """
         f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
+        fooof_kwargs = { 'es' : {
+                    'return_params': [...],
+                    'fit_kwargs': {...}
+                    }
+                'psd': SAME^
+                }
         """
         self.data = data
         self.n_iter = n_iter
@@ -104,9 +109,9 @@ class Ramsey:
         subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
         eigs        = []
         powers_sum  = []
-        n_units     = len(subset_sizes)
-        fit_results = defaultdict(lambda: np.empty((self.n_iter, n_units)))
-        stats_      = defaultdict(lambda: np.empty(n_units))
+        n_subsets     = len(subset_sizes)
+        fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
+        stats_      = defaultdict(lambda: np.zeros(n_subsets))
 
         logging.info(f'working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
@@ -149,12 +154,6 @@ class Ramsey:
     def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
         """
         returned data include 1 pca exponent and 2 PSD exponents
-        fooof_kwargs = { 'es' : {
-                            'return_params': [...],
-                            'fit_kwargs': {...}
-                            }
-                        'psd': SAME^
-                        }
         """
         freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
         pcs   = np.arange(1,n_pc_sub+1)

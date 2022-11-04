@@ -235,7 +235,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
                 other_spec_data = {k : data[k] for k in one_time_keys }
         decomp_dict = {k : np.array(decomp_dict[k]) for k in decomp_dict} # to access np methods
         for k in list(decomp_dict):
-            # Average the slopes
+            # Average the slopes across trials
             if '_exponent' in k: 
                 decomp_dict[k] = decomp_dict[k].mean(0)
         return {**decomp_dict, **other_spec_data}
