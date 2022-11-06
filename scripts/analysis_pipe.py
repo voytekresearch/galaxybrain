@@ -36,14 +36,14 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
         # DEBUG
-        labels = ['2.27'] #list(ising_h5.keys())[4:-4] # these are str temperatures
+        labels = list(ising_h5.keys())[4:-4] # these are str temperatures
         get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
 
 
     def trial_task(t):
         logging.info(f'trial {t}')
         curr_raster = get_function(label)
-        results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs).subset_iter()
+        results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter()
         np.savez(f'{output_dir}/{label}/{t+1}', **results)
         # if shuffle:
         #     results = []
@@ -87,9 +87,10 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
 
             
 if __name__ == '__main__':
-    DEBUG = 1
+    DEBUG = False
 
     init_log()
+    logging.info('begin! \n')
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
     parser.add_argument('-t', dest='test',  action='store_true') # test mouse
@@ -144,10 +145,10 @@ if __name__ == '__main__':
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising_test'),
-                       'ramsey_kwargs' : {'n_iter' : 6,
+        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising'),
+                       'ramsey_kwargs' : {'n_iter' : 10,
                                           'n_pc' : 0.8,
-                                          'pc_range': [0,0.01],
+                                          'pc_range': [0,0.1],
                                           'f_range' : [0,0.01],
                                           'ft_kwargs': {
                                                         'fs': 1,
@@ -163,7 +164,7 @@ if __name__ == '__main__':
                                                             },
                                                         }
                                          },
-                        'num_trials' : 1,
+                        'num_trials' : 4,
                         'data_type': 'ising',
                         }
     output_dir = analysis_args['output_dir']

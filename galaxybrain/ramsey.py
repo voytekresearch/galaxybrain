@@ -80,7 +80,7 @@ def ft(subset, **ft_kwargs):
 
 
 class Ramsey:
-    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}):
+    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse'):
         """
         f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
         fooof_kwargs = { 'es' : {
@@ -97,6 +97,7 @@ class Ramsey:
         self.pc_range = pc_range
         self.f_range = f_range
         self.fooof_kwargs = fooof_kwargs
+        self.data_type = data_type
 
 
     def subset_iter(self):
@@ -106,7 +107,10 @@ class Ramsey:
         returns: eigs, pows (2D)
         fit results and stats
         """
-        subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
+        if self.data_type == 'mouse':
+            subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
+        elif self.data_type == 'ising':
+            subset_sizes = np.linspace(30, self.data.shape[1], 11, dtype=int)
         eigs        = []
         powers_sum  = []
         n_subsets     = len(subset_sizes)

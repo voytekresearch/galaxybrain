@@ -246,32 +246,40 @@ def _sorted_lgnd(xy=(1,1)):
     plt.legend(handles, labels, bbox_to_anchor=xy) # (x, y)
 
 
-def avg_corr_bar(data, mice=MICE_META.keys()):
+def avg_corr_bar(data, mice=sorted(list(MICE_META.keys()))):
     """
     data: data_dict
-    TODO: significance stars for sigbool
     https://stackoverflow.com/questions/40489821/how-to-write-text-above-the-bars-on-a-bar-plot-python/40491960
     https://matplotlib.org/3.3.2/gallery/lines_bars_and_markers/barchart.html#sphx-glr-gallery-lines-bars-and-markers-barchart-py
     https://matplotlib.org/examples/api/barchart_demo.html
-    NOTE: x axis plots differently upon import due to ALL_REGIONS being a set
     """
-    corr_df = pd.DataFrame(index=sorted(list(ALL_REGIONS), reverse=True), columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
+    region_indices = sorted(list(ALL_REGIONS), reverse=True) # reverse because it technically plots backwards
+    corr_df = pd.DataFrame(index=region_indices, columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
+    sig_bools = []
     # populate corr_df
+    # looping over labels and checking existence to stasify ax.patches order
     for m in mice:
-        for r in data[m]:
-            d = data[m][r]['data']
+        for r in sorted(region_indices, reverse=True):
+            try:
+                d = data[m][r]['data']
+            except KeyError:
+                sig_bools.append(False)
+                continue
             mu_psn_r, mu_psn_p,\
             mu_spn_r, mu_spn_p = [d[k].mean(0) for k in ('pearson_corr1', 'pearson_p1',
                                                         'spearman_corr1', 'spearman_p1')]
-            sig_bool = _array_sig(mu_psn_p) or _array_sig(mu_spn_p)
-            print(f'* {m}-{r}') if sig_bool else ...
+            sig_bools.append(_array_sig(mu_psn_p) or _array_sig(mu_spn_p))
             ## might want to avg across one type of corr only
             corr_df[m][r] = np.mean([np.nanmean(mu_psn_r), 
                                     np.nanmean(mu_spn_r)]) #avg of avg of the 2 correlations for that region
-
-    # bar plot        
+    # bar plot
     corr_df = corr_df.rename(columns={name : f'Mouse {i+1}' for i, name in enumerate(corr_df.columns)})
-    corr_df.plot.bar(rot=0, color=['#FFABAB','#C5A3FF', '#85E3FF']).legend(loc='best')
+    ax = corr_df.plot.bar(rot=0, color=['#FFABAB','#C5A3FF', '#85E3FF'])
+    ax.legend(loc='best')
+    # TODO this are all off
+    # for i, p in enumerate(ax.patches):
+    #     if sig_bools[i]: # either not significant, or no bar for that m/r
+    #         ax.annotate('*', (p.get_x() *.982, p.get_height() * .99))
     plt.tick_params(axis="x", which="both", bottom=False)
     plt.xticks(rotation=-45, horizontalalignment='left', fontsize=16)
     for xc in np.arange(.5,10.5,1):
