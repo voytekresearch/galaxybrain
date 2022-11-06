@@ -223,14 +223,18 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
                 } }
     """
     
-    def format_data(f_prefix):
+    def format_data(f_prefix, both_psd=True):
         """load, reshape/average certain data across trials"""
-        one_time_keys = {'eigs', 'pows', 'es_error', 'es_offset', 
-                    'psd_error1', 'psd_offset1', 'psd_error2', 'psd_offset2'}
+        one_time_keys = ['eigs', 'pows', 'es_error']
+                    
+        if both_psd: # at the time of adding both psds, also added offset
+            one_time_keys += ['psd_error1', 'psd_offset1', 'psd_error2', 'psd_offset2', 'es_offset']
+        else:
+            one_time_keys += ['psd_error']
         decomp_dict = defaultdict(lambda: [])
         for i in range(1, n_loop+1):
             with np.load(f'{f_prefix}/{i}.npz', allow_pickle=True) as data:
-                for k in set(data.files) - one_time_keys:
+                for k in set(data.files) - set(one_time_keys):
                     decomp_dict[k].append(data[k])
                 other_spec_data = {k : data[k] for k in one_time_keys }
         decomp_dict = {k : np.array(decomp_dict[k]) for k in decomp_dict} # to access np methods
@@ -253,13 +257,17 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     else:
         n_loop = analysis_args['num_trials']
 
-    if 'mouse' in kind: #"mouse" or "mouse_old"
+    if 'mouse' in kind: #"mouse" or "mouse_shuffle"
+        if kind == 'mouse_shuffle':
+            both_psd = False
+        else:
+            both_psd = True
         for mouse in analysis_args['mouse_kwargs']['mouse_in']:
             data_dict[mouse] = {}
             for region, count in MICE_META[mouse].items():
                 subset_sizes = np.linspace(30, count, 16, dtype=int)
                 meta = {'count':count, 'subsetsizes':subset_sizes}
-                data = format_data(f'{dir_}/{mouse}/{region}')
+                data = format_data(f'{dir_}/{mouse}_{region}', both_psd)
                 data_dict[mouse][region] = {'meta':meta, 'data':data} #appending a big tuple that includes the data
 
     elif kind == 'sim': #ising model

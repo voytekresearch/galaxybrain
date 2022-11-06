@@ -31,7 +31,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
 
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
-        labels = mice_data.get_labels() # labels of form (mouse_name, region_name)
+        labels = mice_data.get_labels() # labels of form (mouse-name_region-name)
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')

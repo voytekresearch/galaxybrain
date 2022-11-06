@@ -164,7 +164,10 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
     data = data['data']
     n_pc = meta['n_pc']
     n = len(subsetsizes)
-    dsuffix = '1'
+    if kind == 'mouse':
+        dsuffix = '1'
+    elif kind == 'shuffle':
+        dsuffix = ''
     ## Plot style
     fig=plt.figure(figsize=(19,8)) 
     subset_fractions = np.linspace(0,1,n)
@@ -185,7 +188,6 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
                 n_pc_curr = n_pc
             elif isinstance(n_pc, float):
                 n_pc_curr = int(n_pc*n_i)
-            print(spec)
             xvals = np.arange(1,n_pc_curr+1)/n_pc_curr if spec == 'eigs'\
                     else np.arange(0,61/120, 1/120)
             # Eigenspectrum
@@ -253,21 +255,23 @@ def avg_corr_bar(data, mice=MICE_META.keys()):
     https://matplotlib.org/examples/api/barchart_demo.html
     NOTE: x axis plots differently upon import due to ALL_REGIONS being a set
     """
-    corr_df = pd.DataFrame(index=ALL_REGIONS, columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
+    corr_df = pd.DataFrame(index=sorted(list(ALL_REGIONS), reverse=True), columns=mice) # cols should be ['Mouse 1', 'Mouse 2', 'Mouse 3']
     # populate corr_df
     for m in mice:
         for r in data[m]:
             d = data[m][r]['data']
             mu_psn_r, mu_psn_p,\
-            mu_spn_r, mu_spn_p = [d[k].mean(0) for k in ('pearson_corr', 'pearson_p',
-                                                        'spearman_corr', 'spearman_p')]
+            mu_spn_r, mu_spn_p = [d[k].mean(0) for k in ('pearson_corr1', 'pearson_p1',
+                                                        'spearman_corr1', 'spearman_p1')]
             sig_bool = _array_sig(mu_psn_p) or _array_sig(mu_spn_p)
+            print(f'* {m}-{r}') if sig_bool else ...
             ## might want to avg across one type of corr only
             corr_df[m][r] = np.mean([np.nanmean(mu_psn_r), 
                                     np.nanmean(mu_spn_r)]) #avg of avg of the 2 correlations for that region
 
     # bar plot        
-    corr_df.plot.bar(rot=0, color=['#FFABAB','#C5A3FF', '#85E3FF'])
+    corr_df = corr_df.rename(columns={name : f'Mouse {i+1}' for i, name in enumerate(corr_df.columns)})
+    corr_df.plot.bar(rot=0, color=['#FFABAB','#C5A3FF', '#85E3FF']).legend(loc='best')
     plt.tick_params(axis="x", which="both", bottom=False)
     plt.xticks(rotation=-45, horizontalalignment='left', fontsize=16)
     for xc in np.arange(.5,10.5,1):
