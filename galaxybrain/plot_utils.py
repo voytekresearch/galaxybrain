@@ -18,7 +18,6 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 ########################
 ### Helper functions ###
 ########################
-
 def noticks():
     plt.xticks([]);    plt.yticks([])
     
@@ -91,7 +90,7 @@ def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
     ax.errorbar(xvals, corr.mean(0), corr.std(0), color='blue', alpha=0.5)
     ax.plot(xvals, corr.T, 'bo', alpha=0.5, markersize=8, lw=5)
     #ax.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
-    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'fraction sampled', f'{label_map[kind]}')
+    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'fraction sampled', f'{label_map[kind]}', size=20)
     if p_vals.any(): # .any() because array
         #TODO need to find a better way to scale location of marker
         x_off = max(xvals)  * .02
@@ -193,14 +192,14 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
             # Eigenspectrum
             ax.plot(xvals, data[spec][i]) #KEEP THIS LINE: proportion of PCs
             logaxes()
-            pltlabel(*labs)
+            pltlabel(*labs, size=20)
 
     ## Exponent distributions
     for (ip, exp), labs in zip(enumerate(['es_exponent', 'psd_exponent'+dsuffix]), [['ES exponent \n at each subset size', '', 'Exponent'],
                                                             ['PSD exponent \n at each subset size', '', 'Exponent']]):
         ax = fig.add_subplot(gs1[ip,1])
         exp_plot(data, exp, ax=ax)
-        pltlabel(*labs)
+        pltlabel(*labs, size=20)
         
     ## colorbar for first two cols
     cax = fig.add_axes([0.45, 0.3, 0.01, 0.35])
@@ -213,7 +212,7 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
     corr_plot(data['pearson_corr'+dsuffix], 'Pearson',
             p_vals=data['pearson_p'+dsuffix], ax=ax)
 
-    plt.suptitle(title)
+    plt.suptitle(title, fontsize=20)
     plt.tight_layout()
     #TODO reset color map
 
@@ -406,13 +405,15 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     Plot % sampled vs a measure (data_key) over multiple temperatures
     data_key: data for each temperature 
     """
-    data = [data[t]['data'][data_key].mean(0) for t in temps]
+    fractions = np.linspace(.0625,1,11)
+
+    data = [np.nanmean(data[t]['data'][data_key], axis=0) for t in temps]
     colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
     colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
     for r, t, c in zip(data, temps, colors):
         lw    =  4  if t == CRIT_T else 2
         alpha =  1  if t == CRIT_T else 0.9
-        ax.plot(FRACTIONS, r, color=c, lw=lw, alpha=alpha)
+        ax.plot(fractions, r, color=c, lw=lw, alpha=alpha) #fractions, 
     # DEBUG
     # plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
     if colorbar: #TODO ValueError: bins must be monotonically increasing or decreasing

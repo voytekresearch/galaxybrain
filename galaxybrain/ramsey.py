@@ -110,7 +110,7 @@ class Ramsey:
         if self.data_type == 'mouse':
             subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
         elif self.data_type == 'ising':
-            subset_sizes = np.linspace(30, self.data.shape[1], 11, dtype=int)
+            subset_sizes = np.linspace(100, self.data.shape[1], 10, dtype=int)
         eigs        = []
         powers_sum  = []
         n_subsets     = len(subset_sizes)

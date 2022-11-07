@@ -231,6 +231,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
             one_time_keys += ['psd_error1', 'psd_offset1', 'psd_error2', 'psd_offset2', 'es_offset']
         else:
             one_time_keys += ['psd_error']
+
         decomp_dict = defaultdict(lambda: [])
         for i in range(1, n_loop+1):
             with np.load(f'{f_prefix}/{i}.npz', allow_pickle=True) as data:
@@ -241,6 +242,8 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
         for k in list(decomp_dict):
             # Average the slopes across trials
             if '_exponent' in k: 
+                decomp_dict[k] = decomp_dict[k].mean(0)
+            if 'knee' in k:
                 decomp_dict[k] = decomp_dict[k].mean(0)
         return {**decomp_dict, **other_spec_data}
 
