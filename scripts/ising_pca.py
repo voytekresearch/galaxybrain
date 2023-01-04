@@ -1,11 +1,5 @@
-import sys
 import os
-from pathlib import Path
-
-here = Path(__file__)
-sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
-#print(pathlib.Path(__file__).parent.resolve().parent.resolve())
-from ramsey import pca
+from galaxybrain.ramsey import pca
 import h5py
 import numpy as np
 

@@ -2,11 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import sys, os
-from pathlib import Path
-
-here = Path(__file__)
-sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
 
 """
 Simulate SOC sandpile

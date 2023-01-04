@@ -1,17 +1,11 @@
 import numpy as np
-import pandas as pd
 from collections import defaultdict
 from sklearn.decomposition import PCA
 from fooof import FOOOFGroup, FOOOF
 from scipy import stats
 from neurodsp.spectral import compute_spectrum
-import time # debug
 from joblib import Parallel, delayed, cpu_count
-from pathlib import Path
-import sys
-here_dir = Path(__file__).parent.absolute()
-sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
-from logs import init_log
+from log_utils.logs import init_log
 import logging
 init_log()
 import warnings

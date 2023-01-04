@@ -1,16 +1,8 @@
 import numpy as np
 import pandas as pd
-import sys, os
 import json
-from pathlib import Path
-
-here = Path(__file__)
-sys.path.append(str(here.parent.absolute().parent.absolute()/'galaxybrain'))
-
-import ramsey
-
+from galaxybrain import ramsey
 import multiprocessing as mp
-
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)

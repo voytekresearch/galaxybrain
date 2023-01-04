@@ -135,7 +135,8 @@ class MouseData:
         """
         Uses load_mouse_data to return a dictionary of mouse data and region info
         args:
-            mice_ix: list of mouse specific indices (0,1,2)
+            mouse_in: list of mouse names
+            burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb)
             
         Returns:
             Dict of form: {mouse_name : (spike_dataframe, region_indices_dict }

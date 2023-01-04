@@ -3,28 +3,21 @@ import pandas as pd
 import sys, os
 import json
 import h5py
-from pathlib import Path
 import argparse
-#DEBUG
+from pathlib import Path
 import sys
-here_dir = Path(__file__).parent.absolute()
-sys.path.append(str(here_dir))
-sys.path.append(str(here_dir.parent.absolute()/'galaxybrain'))
-sys.path.append(str(here_dir.parent.absolute()/'log_utils'))
-sys.path.append(str(here_dir.parent.absolute()/'ising'))
-from ising import tensor_to_raster
-from data_utils import MouseData, shuffle_data
-import ramsey
-from logs import init_log
+from galaxybrain.ising import tensor_to_raster
+from galaxybrain.data_utils import MouseData, shuffle_data
+from galaxybrain import ramsey
+from log_utils.logs import init_log
 import logging
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-#@profile #DEBUG
-def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False):
+
+def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}):
     """
     ramsey_kwargs: dict
-    burn_in: skipping beginning and end of recordings (see DataDiagnostic.ipynb)
     shuffle = (axis, num_shuffles)
     data_type: mouse, or ising
     """
@@ -35,8 +28,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
-        # DEBUG
-        labels = list(ising_h5.keys())[4:-4] # these are str temperatures
+        labels = list(ising_h5.keys())[4:-4] # these are str temperatures DEBUG for limited temps
         get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
 
 
@@ -59,13 +51,13 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
             os.makedirs(f'{output_dir}/{label}')
         except FileExistsError:
             pass
-        if cl_args.mpi:
-            if MY_RANK != 0: # maps to trial number
-                COMM.send(trial_task(t=MY_RANK), dest=0)
+        if mpi_args:
+            if mpi_args['MY_RANK'] != 0: # maps to trial number
+                mpi_args['COMM'].send(trial_task(t=mpi_args['MY_RANK']), dest=0)
             else:
-                trial_task(t=MY_RANK)
-                for t in range(1, NUM_TRIAL):
-                    COMM.recv(source=t)
+                trial_task(t=mpi_args['MY_RANK'])
+                for t in range(1, mpi_args['NUM_TRIAL']):
+                    mpi_args['COMM'].recv(source=t)
         else:
             for t in range(num_trials):
                 trial_task(t)
@@ -86,7 +78,9 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
     #                                                             pearson_p2=curr_output[:,16].mean(0), spearman_p2=curr_output[:,18].mean(0))
 
             
-if __name__ == '__main__':
+def main():
+    here_dir = Path(__file__).parent.absolute()
+
     DEBUG = False
 
     init_log()
@@ -96,15 +90,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', dest='test',  action='store_true') # test mouse
     parser.add_argument('-i', dest='ising', action='store_true')
     parser.add_argument('-p', dest='mpi', action='store_true')
-
     cl_args = parser.parse_args()
-
+    mpi_args = {}
     if cl_args.mpi:
         from mpi4py import MPI
-
         COMM = MPI.COMM_WORLD
-        MY_RANK = COMM.Get_rank()
-        NUM_TRIAL = COMM.Get_size()
+        mpi_args = {'COMM'      : COMM,
+                    'MY_RANK'   : COMM.Get_rank(),
+                    'NUM_TRIAL' : COMM.Get_size()}
     if DEBUG:
         cl_args.ising = True
     #Parallel stuff
@@ -174,6 +167,6 @@ if __name__ == '__main__':
     
     import time
     start= time.perf_counter()
-    run_analysis(**analysis_args)
+    run_analysis(**analysis_args, mpi_args=mpi_args)
 
-    print(time.perf_counter()-start)
+    print(f'time elapsed {time.perf_counter()-start:.2f}')

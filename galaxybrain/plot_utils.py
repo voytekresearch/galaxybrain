@@ -44,23 +44,24 @@ def colorcycler(color_range, num, default=True):
         return cmap
 
 
-def solo_colorbar(colors, values, label, grad='continuous', orientation='vertical', cax=None):
+def solo_colorbar(colors, values, label, grad='continuous', orientation='vertical', cax=None, size=14):
     """
     colors: list e.g., ['#111d6c', '#e03694']
     range: length 2 list of form [min, max]
     fig: either default plt or plt.figure
+    cax: custom axes values
     """
     num, range_ = len(values), (values[0], values[-1])
     if grad == 'continuous': # for some reason still looks discrete sometimes
         cmap = mpl.colors.LinearSegmentedColormap.from_list(name='', colors=colors, N=num)
         norm = mpl.colors.Normalize(*range_)
-        plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, label=label, orientation=orientation, cax=cax)
+        plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), fraction=0.046, pad=0.04, orientation=orientation, cax=cax).set_label(label=label, size=size)
     elif grad == 'discrete':
         colors = colorcycler(colors, num, False)
         cmap, norm = mpl.colors.from_levels_and_colors(np.linspace(*range_, num+1), colors)
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        plt.colorbar(sm, label=label, format='%.1f', orientation=orientation, cax=cax)
+        plt.colorbar(sm, format='%.1f', orientation=orientation, cax=cax).set_label(label=label, size=size)
 
 
 def silent_plot(fx, fx_args, fn):
@@ -374,6 +375,17 @@ TEMP_COLOR_RANGE = ['#2186cf', '#ad4b59'] # b to r (cold to hot)
 CRIT_T           = f'{2.27:.2f}' # as float
 CRIT_C           = 'k' 
 
+
+def normalize_spec(spec, low, high):
+    """
+    normalize around the coherently linear portion of the spectrum 
+    (so that that portion overlaps, and deviations at lower freqs can be observed)
+    
+    TODO: low, high should be percentages
+    """
+    return spec/spec[low:high].sum()
+
+
 def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     """plot spectra over temps given
     spec        : 'eigs' or 'pows'
@@ -382,16 +394,29 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     if temps == 'all':
         temps = [k for k in data if k != 'meta']
 
-    data = {k : data[k] for k in temps} # filter
+    if spec == 'eigs':
+        x_axis = np.linspace(0,1, len(data[temps[-1]]['data'][spec][subset_ix]))
+        norm = lambda x: normalize_spec(x, 420, 800)
+        fit_range = 0.1
+    elif spec == 'pows':
+        x_axis = np.fft.rfftfreq(data['meta']['ft_kwargs']['nperseg'])
+        norm = lambda x: normalize_spec(x, 500, 800)
+        fit_range = 0.0045
+
+    data = {k : data[k] for k in temps} # take out meta
+
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
     colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
+
+
     DEBUG_i = 0
     for t, c in zip(data, colors):
         # conditionals for plot
         lw    =  4  if t==CRIT_T else 2
         alpha =  1  if t==CRIT_T else 0.9
         try:
-            ax.plot(data[t]['data'][spec][subset_ix], color=c, lw=lw, alpha=alpha)
+            ax.plot(x_axis, norm(data[t]['data'][spec][subset_ix]), color=c, lw=lw, alpha=alpha)
+            plt.axvline(fit_range, ls='dashed', color='gray')
         except Exception as e:
             if not DEBUG_i:
                 print(e)
@@ -405,7 +430,7 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     Plot % sampled vs a measure (data_key) over multiple temperatures
     data_key: data for each temperature 
     """
-    fractions = np.linspace(.0625,1,11)
+    fractions = np.linspace(.0625,1,10)
 
     data = [np.nanmean(data[t]['data'][data_key], axis=0) for t in temps]
     colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
@@ -416,9 +441,9 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
         ax.plot(fractions, r, color=c, lw=lw, alpha=alpha) #fractions, 
     # DEBUG
     # plt.xlim([FRACTIONS[0], FRACTIONS[-1]])
-    if colorbar: #TODO ValueError: bins must be monotonically increasing or decreasing
+    if colorbar:
         ftemps = list(map(float, temps)) #need float for colorbar
         cmap, norm = mpl.colors.from_levels_and_colors(ftemps, colors[1:] ) # weird indexing offset by 1
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        plt.colorbar(sm, label='temperature')
+        plt.colorbar(sm).set_label(label='temperature', size=20)
