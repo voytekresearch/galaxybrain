@@ -10,7 +10,7 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.ticker import FormatStrFormatter
 import seaborn as sb
 import cycler
-
+from galaxybrain.ramsey import fooofy
 import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) # for tight_layout() incompatibility with ax object
@@ -447,3 +447,27 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
         sm = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
         plt.colorbar(sm).set_label(label='temperature', size=20)
+
+
+# Debugging plots
+
+def plot_fooof_measures(components, spec, fitting_ranges, x_axis, colors, return_params=[['aperiodic_params', 'exponent'],
+                                                                         ['error'], # MAE
+                                                                         ['aperiodic_params', 'offset']], **fooof_kwargs):
+    """
+    scatter plot of exponents, errors, offsets across multiple values (like temperatures)
+    
+    -- input --
+    components: x axis of spectrum frequencies or PCs
+    spec: spectral values, of shape (n_temps, n_val)
+    fitting_ranges: list of lists like [[low, high]...]
+    """
+    for x_range in fitting_ranges:
+        plt.figure(figsize=(len(return_params)*4,4))
+        results = fooofy(components, spec, x_range, return_params=return_params, **fooof_kwargs)
+        for i, key in enumerate(results):
+            plt.subplot(1,len(return_params),i+1)
+            plt.scatter(x_axis, results[key], c=colors, s=30)
+            plt.title(key)
+            # plt.vlines(CRIT_T, 0 , 0.01)
+        plt.suptitle(f'range: {x_range}')

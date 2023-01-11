@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 matplotlib.rc('figure', max_open_warning = 0)
 
 
-# region : size
+# brain_region : size
 MICE_META   = {'krebs': {'all': 1462,'CP': 176,'HPF': 265,'LS': 122,'MB': 127,'TH': 227,'V1': 334},
                'robbins': {'all': 2688,  'FrMoCtx': 647,  'HPF': 333,  'LS': 133,  'RSP': 112,  'SomMoCtx': 220,  'TH': 638,  'V1': 251,  'V2': 124}, 
                'waksman': {'all': 2296, 'CP': 134, 'HPF': 155, 'TH': 1878}}
@@ -131,7 +131,7 @@ def shuffle_data(data, axis):
     
 class MouseData:
     mice_names = list(MICE_META.keys())
-    def __init__(self, mouse_in=[], burn_in=20, phantom=False):
+    def __init__(self, mouse_in=mice_names, burn_in=20, phantom=False):
         """
         Uses load_mouse_data to return a dictionary of mouse data and region info
         args:
@@ -172,7 +172,7 @@ class MouseData:
             for r in MICE_META[m]:
                 yield f'{m}_{r}'
 
-    def get_spikes(self, mouse_name=None, region=None, label=None):
+    def get_spikes(self, mouse_name=None, region='all', label=None):
         """
         return single raster for mouse-region pair
         df shape: n_time x n_neuron

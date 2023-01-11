@@ -14,6 +14,7 @@ import logging
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
+HERE_DIR = Path(__file__).parent.absolute()
 
 def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}):
     """
@@ -27,12 +28,12 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
         labels = mice_data.get_labels() # labels of form (mouse-name_region-name)
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
-        ising_h5 = h5py.File(str(here_dir/'../data/spikes/ising.hdf5'), 'r')
+        ising_h5 = h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r')
         labels = list(ising_h5.keys())[4:-4] # these are str temperatures DEBUG for limited temps
         get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
 
 
-    def trial_task(t):
+    def trial_task(t, label):
         logging.info(f'trial {t}')
         curr_raster = get_function(label)
         results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter()
@@ -53,14 +54,14 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
             pass
         if mpi_args:
             if mpi_args['MY_RANK'] != 0: # maps to trial number
-                mpi_args['COMM'].send(trial_task(t=mpi_args['MY_RANK']), dest=0)
+                mpi_args['COMM'].send(trial_task(mpi_args['MY_RANK'], label), dest=0)
             else:
-                trial_task(t=mpi_args['MY_RANK'])
+                trial_task(mpi_args['MY_RANK'], label)
                 for t in range(1, mpi_args['NUM_TRIAL']):
                     mpi_args['COMM'].recv(source=t)
         else:
             for t in range(num_trials):
-                trial_task(t)
+                trial_task(t, label)
             
     # TODO this is outdated
     # if shuffle:
@@ -79,7 +80,6 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
 
             
 def main():
-    here_dir = Path(__file__).parent.absolute()
 
     DEBUG = False
 
@@ -103,7 +103,7 @@ def main():
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
-        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/TEST'),
+        analysis_args = {'output_dir' :  str(HERE_DIR/'../data/experiments/TEST'),
                         'mouse_kwargs': {'phantom':True},
                         'ramsey_kwargs' : {
                                             'n_iter': 5, 
@@ -120,7 +120,7 @@ def main():
                         'data_type': 'mouse',
                         }
     elif cl_args.mouse:
-        analysis_args = {'output_dir' :  str(here_dir/'../data/experiments/mouse'),
+        analysis_args = {'output_dir' :  str(HERE_DIR/'../data/experiments/mouse'),
                         'mouse_kwargs': {'mouse_in'  : ['waksman']},
                         'ramsey_kwargs' : {
                                             'n_iter': 95, 
@@ -138,7 +138,7 @@ def main():
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(here_dir/'../data/experiments/ising'),
+        analysis_args={'output_dir' : str(HERE_DIR/'../data/experiments/ising'),
                        'ramsey_kwargs' : {'n_iter' : 10,
                                           'n_pc' : 0.8,
                                           'pc_range': [0,0.1],
@@ -169,4 +169,4 @@ def main():
     start= time.perf_counter()
     run_analysis(**analysis_args, mpi_args=mpi_args)
 
-    print(f'time elapsed {time.perf_counter()-start:.2f}')
+    logging.info(f'time elapsed: {time.perf_counter()-start:.2f}')
