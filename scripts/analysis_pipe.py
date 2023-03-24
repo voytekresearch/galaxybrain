@@ -29,21 +29,23 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         ising_h5 = h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r')
-        labels = list(ising_h5.keys())[4:-4] # these are str temperatures DEBUG for limited temps
-        get_function = lambda label: tensor_to_raster(ising_h5[label], keep=1024)
+        labels = list(ising_h5.keys())[4:-4] # these are str temperatures NOTE for limited temps
+        get_function = lambda label: tensor_to_raster(ising_h5[label], keep=700)
 
 
     def trial_task(t, label):
         logging.info(f'trial {t}')
-        curr_raster = get_function(label)
-        results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter()
-        np.savez(f'{output_dir}/{label}/{t+1}', **results)
-        # if shuffle:
-        #     results = []
-        #     for s in range(shuffle[1]):
-        #         curr_raster = shuffle_data(curr_raster, shuffle[0])
-        #         results.append(ramsey.ramsey(data=curr_raster, **ramsey_kwargs))
-        #     #TODO save data
+        if not shuffle:
+            curr_raster = get_function(label)
+            results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter()
+            np.savez(f'{output_dir}/{label}/{t+1}', **results)
+        if shuffle:
+            results = []
+            for s in range(shuffle[1]):
+                curr_raster = get_function(label)
+                curr_raster = shuffle_data(curr_raster, shuffle[0])
+                results.append(ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter())
+            #TODO save data
 
 
     for label in labels:
@@ -97,7 +99,7 @@ def main():
         COMM = MPI.COMM_WORLD
         mpi_args = {'COMM'      : COMM,
                     'MY_RANK'   : COMM.Get_rank(),
-                    'NUM_TRIAL' : COMM.Get_size()}
+                    'NUM_TRIAL' : COMM.Get_size()} # specified in job script
     if DEBUG:
         cl_args.ising = True
     #Parallel stuff

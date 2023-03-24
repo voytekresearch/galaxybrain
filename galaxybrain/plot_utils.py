@@ -408,7 +408,6 @@ def plot_ising_spectra(data, spec, temps='all', subset_ix=15, ax=plt):
     colors = colorcycler(TEMP_COLOR_RANGE, len(data), False)
     colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
 
-
     DEBUG_i = 0
     for t, c in zip(data, colors):
         # conditionals for plot

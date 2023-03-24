@@ -1,6 +1,5 @@
 import numpy as np
 from collections import defaultdict
-from sklearn.decomposition import PCA
 from fooof import FOOOFGroup, FOOOF
 from scipy import stats
 from neurodsp.spectral import compute_spectrum
@@ -12,16 +11,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def fooofy(components, spectra, fit_range,
-           group=True, 
-           fit_kwargs={},
-           return_params='default', 
-           ):
+def fooofy(components, spectra, fit_range, group=True, fit_kwargs={}, return_params='default'):
     """
     fit FOOOF model on given spectrum and return params
-        components: frequencies or PC dimensions
-        spectra: PSDs or variance explained
-        fit_range: range for x axis of spectrum to fit
+    Parameters:
+        components (1d array): frequencies or PC dimensions
+        spectra (2d array): PSDs or variance explained
+        fit_range (list): range for x axis of spectrum to fit like [0, 0.4]
         group: whether to use FOOOFGroup or not
     """
     if return_params == 'default':
@@ -42,11 +38,13 @@ def pca(data, n_pc=None):
     """
     Decomposition in space
     """
+    from sklearn.decomposition import PCA
+
     if not isinstance(data, np.ndarray):
         data = np.array(data)
     pop_pca = PCA(n_pc).fit(data)
     evals = pop_pca.explained_variance_ratio_
-
+    del PCA # avoid potential memory leak? lol
     return evals
 
 
@@ -89,10 +87,9 @@ class Ramsey:
         self.n_pc = n_pc
         self.ft_kwargs = ft_kwargs
         self.pc_range = pc_range
-        self.f_range = f_range
+        self.f_range = f_range # TODO make input percentages, then transform here
         self.fooof_kwargs = fooof_kwargs
         self.data_type = data_type
-
 
     def subset_iter(self):
         """Do random_subset_decomp over incrementing subset sizes
@@ -111,7 +108,7 @@ class Ramsey:
         fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
         stats_      = defaultdict(lambda: np.zeros(n_subsets))
 
-        logging.info(f'working with {cpu_count()} processors')
+        logging.info(f'subset_iter: working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
             n_pc_curr = int(self.n_pc*num)
 
@@ -122,7 +119,7 @@ class Ramsey:
                 pc_range_curr = [self.pc_range[0], int(n_pc_curr*self.pc_range[1])]
             # DEBUG can't fooof fit if range is too small
             if pc_range_curr[1] < 3:
-                logging.info(f'    skipping subset {num}')
+                logging.warning(f'subset_iter: skipping subset {num}')
                 continue
 
             spectra_i, results_i = self.random_subset_decomp(subset_size=num, n_pc_sub=n_pc_curr, pc_range_sub=pc_range_curr)
@@ -138,16 +135,15 @@ class Ramsey:
                     stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                     stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 except ValueError: # can't compute correlation
-                    logging.info(f"NaNs at subset iter: {i}, num: {num}")
+                    logging.warning(f"self.subset_iter: NaNs at subset iter: {i}, num: {num}")
                 except KeyError: # skip psd_exponent nosum because of 0s spec
-                    logging.info(f'0s spec at subset iter: {i}, num: {num}')
+                    pass
 
         # NOTE: need to unpack dict in shuffle case (key order conserved python 3.6)
         return {'eigs': eigs, 
                 'pows': powers_sum, 
                 **fit_results, 
                 **stats_}
-
 
     def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
         """
@@ -163,8 +159,10 @@ class Ramsey:
         def parallel_task():
             loc_array = np.sort(np.random.choice(self.data.shape[1], subset_size, replace=False))
             subset = np.array(self.data.iloc[:,loc_array]) #converted to array for testing jit
-            return pca(subset, n_pc_sub), *ft(subset, **self.ft_kwargs)
-
+            pca_results, ft_results = pca(subset, n_pc_sub), *ft(subset, **self.ft_kwargs)
+            return pca_results, ft_results 
+        
+        # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
         results = Parallel(n_jobs=cpu_count())(delayed(parallel_task)() for _ in range(self.n_iter))
         evals, powers_sum, powers_chans = list(zip(*results))
         for i in range(self.n_iter):
@@ -184,8 +182,8 @@ class Ramsey:
                 for key, params in d.items():
                     psd_fit2[key].append(params)
             psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
-        except Exception as e:
-            logging.info(f'could not get sum spec at {subset_size}')
+        except Exception as e: # Fitting fails because the input power spectra data is mostly 0s (after logging, contains NaNs or Infs) 
+            logging.warning(f'random_subset_decomp: could not get summed psd at {subset_size}')
             include_psd_fit2 = False
 
         spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}
