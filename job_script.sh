@@ -16,4 +16,4 @@ ROOT="/home/brirry/galaxybrain"
 exp_dir=${ROOT}/data/experiments/ising # this should be an arg to avoid repetition
 rm -rf $exp_dir
 mkdir $exp_dir
-mpirun -v -machinefile $PBS_NODEFILE -np 4 --map-by ppr:1:node python ${ROOT}/main.py -i -p >> /home/brirry/logs/analysis.log 2>&1
+cd $ROOT && mpirun -v -machinefile $PBS_NODEFILE -np 4 --map-by ppr:1:node python ${ROOT}/main.py -i -p >> /home/brirry/logs/analysis.log 2>&1

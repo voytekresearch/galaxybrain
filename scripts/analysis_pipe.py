@@ -31,7 +31,7 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
     elif data_type == 'ising':
         with h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r') as f:
             ising_h5 = {k: np.array(f[k]) for k in f.keys()}
-        labels = list(ising_h5.keys())[9:-9] # these are str temperatures NOTE for limited temps
+        labels = list(ising_h5.keys())[:] # these are str temperatures NOTE for limited temps
         del ising_h5
         gc.collect()
         def get_function(label):
