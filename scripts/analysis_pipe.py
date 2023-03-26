@@ -11,12 +11,13 @@ from galaxybrain.data_utils import MouseData, shuffle_data
 from galaxybrain import ramsey
 from log_utils.logs import init_log
 import logging
+import gc
 import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 HERE_DIR = Path(__file__).parent.absolute()
 
-def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}):
+def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}, parallel=True):
     """
     ramsey_kwargs: dict
     shuffle = (axis, num_shuffles)
@@ -28,16 +29,22 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
         labels = mice_data.get_labels() # labels of form (mouse-name_region-name)
         get_function = lambda label: mice_data.get_spikes(label=label)
     elif data_type == 'ising':
-        ising_h5 = h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r')
-        labels = list(ising_h5.keys())[4:-4] # these are str temperatures NOTE for limited temps
-        get_function = lambda label: tensor_to_raster(ising_h5[label], keep=700)
+        with h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r') as f:
+            ising_h5 = {k: np.array(f[k]) for k in f.keys()}
+        labels = list(ising_h5.keys())[9:-9] # these are str temperatures NOTE for limited temps
+        del ising_h5
+        gc.collect()
+        def get_function(label):
+            with h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r') as f:
+                ising_h5 = {k: np.array(f[k]) for k in f.keys()}
+            return tensor_to_raster(ising_h5[label], keep=700)
 
 
     def trial_task(t, label):
-        logging.info(f'trial {t}')
+        logging.info(f'trial {t+1}')
         if not shuffle:
             curr_raster = get_function(label)
-            results = ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter()
+            results = ramsey.Ramsey(data=(get_function, label), **ramsey_kwargs, data_type=data_type).subset_iter()
             np.savez(f'{output_dir}/{label}/{t+1}', **results)
         if shuffle:
             results = []
@@ -86,7 +93,7 @@ def main():
     DEBUG = False
 
     init_log()
-    logging.info('begin! \n')
+    logging.info('begin!')
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
     parser.add_argument('-t', dest='test',  action='store_true') # test mouse
@@ -140,14 +147,15 @@ def main():
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir' : str(HERE_DIR/'../data/experiments/ising'),
-                       'ramsey_kwargs' : {'n_iter' : 10,
-                                          'n_pc' : 0.8,
-                                          'pc_range': [0,0.1],
-                                          'f_range' : [0,0.01],
+        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/isingTEST'),
+                       'ramsey_kwargs' : {'n_iter'   : 10,
+                                          'n_pc'     : 0.8,
+                                          'pc_range' : [0,0.1],
+                                          'f_range'  : [0,0.01],
+                                          'parallel' : False,
                                           'ft_kwargs': {
-                                                        'fs': 1,
-                                                        'nperseg': 2000,
+                                                        'fs'      : 1,
+                                                        'nperseg' : 2000,
                                                         'noverlap': int(.8*2000)
                                                     },
                                           'fooof_kwargs': {
@@ -155,20 +163,21 @@ def main():
                                                                                     ['aperiodic_params', 'knee'],
                                                                                     ['error'], # MAE
                                                                                     ['aperiodic_params', 'offset']],
-                                                                    'fit_kwargs': {'aperiodic_mode': 'knee'}
+                                                                    'fit_kwargs'  : {'aperiodic_mode': 'knee'}
                                                             },
                                                         }
                                          },
-                        'num_trials' : 4,
-                        'data_type': 'ising',
+                        'num_trials'   : 4,
+                        'data_type'    : 'ising',
                         }
+    os.environ['NUMEXPR_MAX_THREADS'] = str(analysis_args['ramsey_kwargs']['n_iter']) # otherwise numexpr knocks it down
     output_dir = analysis_args['output_dir']
 
     with open(f"{output_dir}/analysis_args.json",'w') as f:
         json.dump(analysis_args, f, indent=1)
     
     import time
-    start= time.perf_counter()
+    start = time.perf_counter()
     run_analysis(**analysis_args, mpi_args=mpi_args)
 
     logging.info(f'time elapsed: {time.perf_counter()-start:.2f}')

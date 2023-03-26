@@ -13,3 +13,5 @@ def init_log():
     logging.basicConfig(filename=log_path,
                         level=level,
                         format='%(asctime)s | %(levelname)s at %(filename)s: %(message)s')
+    
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)

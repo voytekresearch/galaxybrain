@@ -9,6 +9,9 @@ import logging
 init_log()
 import warnings
 warnings.filterwarnings("ignore")
+import time
+import gc
+from multiprocessing import Pool, TimeoutError
 
 
 def fooofy(components, spectra, fit_range, group=True, fit_kwargs={}, return_params='default'):
@@ -42,9 +45,14 @@ def pca(data, n_pc=None):
 
     if not isinstance(data, np.ndarray):
         data = np.array(data)
-    pop_pca = PCA(n_pc).fit(data)
+    logging.debug('pca: init')
+    pca = PCA(n_pc)
+    logging.debug('pca: fit')
+    pop_pca = pca.fit(data)
+    logging.debug('pca: get var')
     evals = pop_pca.explained_variance_ratio_
-    del PCA # avoid potential memory leak? lol
+    del PCA,pca # avoid potential memory leak? lol
+    gc.collect()
     return evals
 
 
@@ -72,7 +80,7 @@ def ft(subset, **ft_kwargs):
 
 
 class Ramsey:
-    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse'):
+    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse', parallel=True):
         """
         f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
         fooof_kwargs = { 'es' : {
@@ -90,6 +98,7 @@ class Ramsey:
         self.f_range = f_range # TODO make input percentages, then transform here
         self.fooof_kwargs = fooof_kwargs
         self.data_type = data_type
+        self.parallel = parallel
 
     def subset_iter(self):
         """Do random_subset_decomp over incrementing subset sizes
@@ -98,18 +107,23 @@ class Ramsey:
         returns: eigs, pows (2D)
         fit results and stats
         """
+        data = self.data[0](self.data[1])
+
         if self.data_type == 'mouse':
-            subset_sizes = np.linspace(30, self.data.shape[1], 16, dtype=int)
+            subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
         elif self.data_type == 'ising':
-            subset_sizes = np.linspace(100, self.data.shape[1], 10, dtype=int)
+            subset_sizes = np.linspace(100, data.shape[1], 10, dtype=int)
+        del data
+        gc.collect()
         eigs        = []
         powers_sum  = []
         n_subsets     = len(subset_sizes)
         fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
         stats_      = defaultdict(lambda: np.zeros(n_subsets))
-
-        logging.info(f'subset_iter: working with {cpu_count()} processors')
+        if self.parallel:
+            logging.info(f'subset_iter: working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
+            logging.debug(f'subset {i+1}')
             n_pc_curr = int(self.n_pc*num)
 
             # [0,None] for whole range, otherwise check if float for fraction
@@ -156,14 +170,34 @@ class Ramsey:
         sum_powers_mat  = np.empty((self.n_iter, len(freqs)))
         chan_powers_mat = np.empty((self.n_iter, subset_size, len(freqs)))
 
-        def parallel_task():
-            loc_array = np.sort(np.random.choice(self.data.shape[1], subset_size, replace=False))
-            subset = np.array(self.data.iloc[:,loc_array]) #converted to array for testing jit
-            pca_results, ft_results = pca(subset, n_pc_sub), *ft(subset, **self.ft_kwargs)
-            return pca_results, ft_results 
+        def iter_task():
+            data = self.data[0](self.data[1])
+
+            loc_array = np.sort(np.random.choice(data.shape[1], subset_size, replace=False))
+            subset = np.array(data.iloc[:,loc_array]) #converted to array for testing jit
+            logging.debug('iter_task: starting fft')
+            ft_results = ft(subset, **self.ft_kwargs)
+            logging.debug('iter_task: starting pca')
+            with Pool(processes=1) as pool:
+                res = pool.apply_async(pca, (subset, n_pc_sub))
+                while True:
+                    try:
+                        pca_results = res.get(timeout=10)
+                        break
+                    except TimeoutError:
+                        logging.warning('pool async timed out')
+
+            del subset, data
+            gc.collect()
+            return (pca_results, *ft_results)
         
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
-        results = Parallel(n_jobs=cpu_count())(delayed(parallel_task)() for _ in range(self.n_iter))
+        if self.parallel: 
+            results = Parallel(n_jobs=cpu_count())(delayed(iter_task)() for _ in range(self.n_iter))
+        else: #probably local testing:
+            results = [iter_task() for _ in range(self.n_iter)]
+
+
         evals, powers_sum, powers_chans = list(zip(*results))
         for i in range(self.n_iter):
             evals_mat[i] = evals[i]
