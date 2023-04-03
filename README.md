@@ -12,6 +12,9 @@ repo structure
 
 requirements.txt only has two libraries, assuming you have the standard up to date scientific python installation.
 
+## warnings
+- susbets sizes should have a single source of truth, since they are used across modules and sometimes have assumed parametrizations
+
 ## Links
 - [Progress journal here](https://docs.google.com/document/d/1x32vZnbvk3XzZA9cq1xlVkucI4LLv9rUdQW86IzVNiY/edit)
 - [Data is from here](https://janelia.figshare.com/articles/Eight-probe_Neuropixels_recordings_during_spontaneous_behaviors/7739750)

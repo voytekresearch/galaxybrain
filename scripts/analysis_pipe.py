@@ -147,12 +147,12 @@ def main():
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/isingTEST'),
+        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
                        'ramsey_kwargs' : {'n_iter'   : 10,
                                           'n_pc'     : 0.8,
                                           'pc_range' : [0,0.1],
                                           'f_range'  : [0,0.01],
-                                          'parallel' : False,
+                                          'parallel' : True,
                                           'ft_kwargs': {
                                                         'fs'      : 1,
                                                         'nperseg' : 2000,

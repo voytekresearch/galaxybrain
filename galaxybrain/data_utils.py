@@ -277,7 +277,7 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
     elif kind == 'sim': #ising model
         N = analysis_args['N']
         for t in next(os.walk(dir_))[1]:
-            subset_sizes = np.linspace(30, N, 16, dtype=int) #used to be N-10
+            subset_sizes = np.linspace(100, N, 10, dtype=int) #used to be N-10
             meta = {'subsetsizes':subset_sizes}
             try:
                 data = format_data(f'{dir_}/{t}')
@@ -293,6 +293,6 @@ def load_results(dir_, kind='mouse', plot='', analysis_args=None):
         ## since only one kind of noise, just one key
         data_dict['all'] = {'data':data, 'meta':meta} 
 
-    data_dict['meta'] = {**analysis_args['ramsey_kwargs'], 'pc_range':[0,None]} # meta for all data
+    data_dict['meta'] = {**analysis_args['ramsey_kwargs']} # meta for all data
     
     return data_dict

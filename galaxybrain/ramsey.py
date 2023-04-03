@@ -144,6 +144,7 @@ class Ramsey:
             for measure, dat in results_i.items():
                 fit_results[measure][:,i] =  dat
 
+            # calculate correlation across fits of random subsets
             for it in [1,2]: #summed and non summed
                 try:
                     stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
@@ -159,9 +160,15 @@ class Ramsey:
                 **fit_results, 
                 **stats_}
 
-    def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
+    def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub, n_parallel_jobs=10):
         """
         returned data include 1 pca exponent and 2 PSD exponents
+        performs iter_task of main computational load
+            - not all tasks are distributed as reaching CPU limit has diminishing returns
+
+        Returns
+            spectra := {evals, psd, psd_chan}
+            fit_dict := {es_<fit_item>..., psd_<fit_item>...}
         """
         freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
         pcs   = np.arange(1,n_pc_sub+1)
@@ -192,8 +199,12 @@ class Ramsey:
             return (pca_results, *ft_results)
         
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
-        if self.parallel: 
-            results = Parallel(n_jobs=cpu_count())(delayed(iter_task)() for _ in range(self.n_iter))
+        if self.parallel:
+            results = []
+            n_outer = self.n_iter//n_parallel_jobs
+            for _ in range(n_outer):
+                curr_results = Parallel(n_jobs=cpu_count())(delayed(iter_task)() for _ in range(n_parallel_jobs)) # n_parallel_jobs should be equal to n_jobs
+                results = [*results, *curr_results]
         else: #probably local testing:
             results = [iter_task() for _ in range(self.n_iter)]
 

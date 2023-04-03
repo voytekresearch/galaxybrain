@@ -82,7 +82,7 @@ def silent_plot(fx, fx_args, fn):
 FRACTIONS = np.linspace(.0625,1,16)
 
 
-def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
+def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt, fontsize=20):
     """if given p_vals, annotates point of p<0.05 with a '*' 
     xvals used to be subsetsizes"""
     n_trials = corr.shape[0]
@@ -91,7 +91,7 @@ def corr_plot(corr, kind, xvals=FRACTIONS, p_vals=None, ax=plt):
     ax.errorbar(xvals, corr.mean(0), corr.std(0), color='blue', alpha=0.5)
     ax.plot(xvals, corr.T, 'bo', alpha=0.5, markersize=8, lw=5)
     #ax.plot(subsetsizes, pearson_r, color = 'blue', alpha = 0.5)
-    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'fraction sampled', f'{label_map[kind]}', size=20)
+    pltlabel(f'{kind}\'s {label_map[kind]} as function of subset size', 'fraction sampled', f'{label_map[kind]}', size=fontsize)
     if p_vals.any(): # .any() because array
         #TODO need to find a better way to scale location of marker
         x_off = max(xvals)  * .02
@@ -150,7 +150,7 @@ def exp_plot(data, key, kind='violin', meta=None, ax=plt):
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
 
-def plot_all_measures(data, meta, kind='mouse', title=''):
+def plot_all_measures(data, meta, kind='', title='', figsize=(19,8), fontsize=20):
     """
     data has keys 'data', 'meta'
     meta is for all datasets and has keys: 'n_iters', 'n_pc', 'f_range', 'subsetsizes', 'pc_range'
@@ -164,12 +164,9 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
     data = data['data']
     n_pc = meta['n_pc']
     n = len(subsetsizes)
-    if kind == 'mouse':
-        dsuffix = '1'
-    elif kind == 'shuffle':
-        dsuffix = ''
+    dsuffix = '' if kind == 'shuffle' else '1'
     ## Plot style
-    fig=plt.figure(figsize=(19,8)) 
+    fig=plt.figure(figsize=figsize) 
     subset_fractions = np.linspace(0,1,n)
     cmap = plt.cm.cool(subset_fractions)
     plt.rcParams["axes.prop_cycle"] = plt.cycler("color", cmap) # TODO bad pattern because this changes properties globally
@@ -189,18 +186,18 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
             elif isinstance(n_pc, float):
                 n_pc_curr = int(n_pc*n_i)
             xvals = np.arange(1,n_pc_curr+1)/n_pc_curr if spec == 'eigs'\
-                    else np.arange(0,61/120, 1/120)
+                    else np.fft.rfftfreq(meta['ft_kwargs']['nperseg'])
             # Eigenspectrum
-            ax.plot(xvals, data[spec][i]) #KEEP THIS LINE: proportion of PCs
+            ax.plot(xvals, data[spec][i])
             logaxes()
-            pltlabel(*labs, size=20)
+            pltlabel(*labs, size=fontsize)
 
     ## Exponent distributions
     for (ip, exp), labs in zip(enumerate(['es_exponent', 'psd_exponent'+dsuffix]), [['ES exponent \n at each subset size', '', 'Exponent'],
                                                             ['PSD exponent \n at each subset size', '', 'Exponent']]):
         ax = fig.add_subplot(gs1[ip,1])
         exp_plot(data, exp, ax=ax)
-        pltlabel(*labs, size=20)
+        pltlabel(*labs, size=fontsize)
         
     ## colorbar for first two cols
     cax = fig.add_axes([0.45, 0.3, 0.01, 0.35])
@@ -210,10 +207,10 @@ def plot_all_measures(data, meta, kind='mouse', title=''):
 
     ## Interspec Correlation
     ax = fig.add_subplot(gs2[:])
-    corr_plot(data['pearson_corr'+dsuffix], 'Pearson',
-            p_vals=data['pearson_p'+dsuffix], ax=ax)
+    corr_plot(data['pearson_corr'+dsuffix], 'Pearson', xvals=subset_fractions,
+            p_vals=data['pearson_p'+dsuffix], ax=ax, fontsize=fontsize)
 
-    plt.suptitle(title, fontsize=20)
+    plt.suptitle(title, fontsize=fontsize)
     plt.tight_layout()
     #TODO reset color map
 
@@ -431,6 +428,7 @@ def measure_over_temps(data, data_key, temps, ax=plt, colorbar=False):
     """
     fractions = np.linspace(.0625,1,10)
 
+    # avg across trials
     data = [np.nanmean(data[t]['data'][data_key], axis=0) for t in temps]
     colors = colorcycler(TEMP_COLOR_RANGE, len(temps), False)
     colors[temps.index(CRIT_T)] = mpl.colors.to_rgba(CRIT_C)
