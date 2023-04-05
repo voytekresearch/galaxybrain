@@ -4,9 +4,6 @@ from fooof import FOOOFGroup, FOOOF
 from scipy import stats
 from neurodsp.spectral import compute_spectrum
 from joblib import Parallel, delayed, cpu_count
-from log_utils.logs import init_log
-import logging
-init_log()
 import warnings
 warnings.filterwarnings("ignore")
 import time
@@ -45,11 +42,11 @@ def pca(data, n_pc=None):
 
     if not isinstance(data, np.ndarray):
         data = np.array(data)
-    logging.debug('pca: init')
+    # logging.debug('pca: init')
     pca = PCA(n_pc)
-    logging.debug('pca: fit')
+    # logging.debug('pca: fit')
     pop_pca = pca.fit(data)
-    logging.debug('pca: get var')
+    # logging.debug('pca: get var')
     evals = pop_pca.explained_variance_ratio_
     del PCA,pca # avoid potential memory leak? lol
     gc.collect()
@@ -80,7 +77,7 @@ def ft(subset, **ft_kwargs):
 
 
 class Ramsey:
-    def __init__(self, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse', parallel=True):
+    def __init__(self, logger, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse', parallel=True):
         """
         f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
         fooof_kwargs = { 'es' : {
@@ -90,6 +87,7 @@ class Ramsey:
                 'psd': SAME^
                 }
         """
+        self.logger = logger
         self.data = data
         self.n_iter = n_iter
         self.n_pc = n_pc
@@ -121,9 +119,9 @@ class Ramsey:
         fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
         stats_      = defaultdict(lambda: np.zeros(n_subsets))
         if self.parallel:
-            logging.info(f'subset_iter: working with {cpu_count()} processors')
+            self.logger.info(f'subset_iter: working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
-            logging.debug(f'subset {i+1}')
+            self.logger.debug(f'subset {i+1}')
             n_pc_curr = int(self.n_pc*num)
 
             # [0,None] for whole range, otherwise check if float for fraction
@@ -133,7 +131,7 @@ class Ramsey:
                 pc_range_curr = [self.pc_range[0], int(n_pc_curr*self.pc_range[1])]
             # DEBUG can't fooof fit if range is too small
             if pc_range_curr[1] < 3:
-                logging.warning(f'subset_iter: skipping subset {num}')
+                self.logger.warning(f'subset_iter: skipping subset {num}')
                 continue
 
             spectra_i, results_i = self.random_subset_decomp(subset_size=num, n_pc_sub=n_pc_curr, pc_range_sub=pc_range_curr)
@@ -150,7 +148,7 @@ class Ramsey:
                     stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                     stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 except ValueError: # can't compute correlation
-                    logging.warning(f"self.subset_iter: NaNs at subset iter: {i}, num: {num}")
+                    self.logger.warning(f"self.subset_iter: NaNs at subset iter: {i}, num: {num}")
                 except KeyError: # skip psd_exponent nosum because of 0s spec
                     pass
 
@@ -182,9 +180,9 @@ class Ramsey:
 
             loc_array = np.sort(np.random.choice(data.shape[1], subset_size, replace=False))
             subset = np.array(data.iloc[:,loc_array]) #converted to array for testing jit
-            logging.debug('iter_task: starting fft')
+            self.logger.debug('iter_task: starting fft')
             ft_results = ft(subset, **self.ft_kwargs)
-            logging.debug('iter_task: starting pca')
+            self.logger.debug('iter_task: starting pca')
             with Pool(processes=1) as pool:
                 res = pool.apply_async(pca, (subset, n_pc_sub))
                 while True:
@@ -192,7 +190,7 @@ class Ramsey:
                         pca_results = res.get(timeout=10)
                         break
                     except TimeoutError:
-                        logging.warning('pool async timed out')
+                        self.logger.warning('pool async timed out')
 
             del subset, data
             gc.collect()
@@ -228,7 +226,7 @@ class Ramsey:
                     psd_fit2[key].append(params)
             psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
         except Exception as e: # Fitting fails because the input power spectra data is mostly 0s (after logging, contains NaNs or Infs) 
-            logging.warning(f'random_subset_decomp: could not get summed psd at {subset_size}')
+            self.logger.warning(f'random_subset_decomp: could not get summed psd at {subset_size}')
             include_psd_fit2 = False
 
         spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}

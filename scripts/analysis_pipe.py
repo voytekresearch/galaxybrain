@@ -17,7 +17,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 HERE_DIR = Path(__file__).parent.absolute()
 
-def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}, parallel=True):
+def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}):
     """
     ramsey_kwargs: dict
     shuffle = (axis, num_shuffles)
@@ -41,22 +41,22 @@ def run_analysis(output_dir, num_trials, ramsey_kwargs, data_type, mouse_kwargs=
 
 
     def trial_task(t, label):
-        logging.info(f'trial {t+1}')
+        logger.info(f'trial {t+1}')
         if not shuffle:
             curr_raster = get_function(label)
-            results = ramsey.Ramsey(data=(get_function, label), **ramsey_kwargs, data_type=data_type).subset_iter()
+            results = ramsey.Ramsey(data=(get_function, label), **ramsey_kwargs, data_type=data_type, logger=logger).subset_iter()
             np.savez(f'{output_dir}/{label}/{t+1}', **results)
         if shuffle:
             results = []
             for s in range(shuffle[1]):
                 curr_raster = get_function(label)
                 curr_raster = shuffle_data(curr_raster, shuffle[0])
-                results.append(ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type).subset_iter())
+                results.append(ramsey.Ramsey(data=curr_raster, **ramsey_kwargs, data_type=data_type, logger=logger).subset_iter())
             #TODO save data
 
 
     for label in labels:
-        logging.info(label)
+        logger.info(label)
         try:
             os.makedirs(f'{output_dir}/{label}')
         except FileExistsError:
@@ -92,8 +92,6 @@ def main():
 
     DEBUG = False
 
-    init_log()
-    logging.info('begin!')
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
     parser.add_argument('-t', dest='test',  action='store_true') # test mouse
@@ -107,6 +105,9 @@ def main():
         mpi_args = {'COMM'      : COMM,
                     'MY_RANK'   : COMM.Get_rank(),
                     'NUM_TRIAL' : COMM.Get_size()} # specified in job script
+        logger = init_log(COMM.Get_rank())
+    else:
+        logger = init_log(None)
     if DEBUG:
         cl_args.ising = True
     #Parallel stuff
@@ -147,8 +148,8 @@ def main():
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
-                       'ramsey_kwargs' : {'n_iter'   : 10,
+        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/isingTEST'),
+                       'ramsey_kwargs' : {'n_iter'   : 100,
                                           'n_pc'     : 0.8,
                                           'pc_range' : [0,0.1],
                                           'f_range'  : [0,0.01],
@@ -178,6 +179,6 @@ def main():
     
     import time
     start = time.perf_counter()
-    run_analysis(**analysis_args, mpi_args=mpi_args)
+    run_analysis(**analysis_args, mpi_args=mpi_args, logger=logger)
 
-    logging.info(f'time elapsed: {time.perf_counter()-start:.2f}')
+    logger.info(f'time elapsed: {time.perf_counter()-start:.2f}')
