@@ -90,7 +90,7 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
             
 def main():
 
-    DEBUG = False
+    DEBUG = 1
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
@@ -110,6 +110,7 @@ def main():
         logger = init_log(None)
     if DEBUG:
         cl_args.ising = True
+    logger.info('Begin')
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
@@ -148,29 +149,52 @@ def main():
                         }
     #DEBUG args
     elif cl_args.ising:
-        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/isingTEST'),
-                       'ramsey_kwargs' : {'n_iter'   : 100,
-                                          'n_pc'     : 0.8,
-                                          'pc_range' : [0,0.1],
-                                          'f_range'  : [0,0.01],
-                                          'parallel' : True,
-                                          'ft_kwargs': {
-                                                        'fs'      : 1,
-                                                        'nperseg' : 2000,
-                                                        'noverlap': int(.8*2000)
+        # analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
+        #                'ramsey_kwargs' : {'n_iter'   : 100,
+        #                                   'n_pc'     : 0.8,
+        #                                   'pc_range' : [0,0.1],
+        #                                   'f_range'  : [0,0.01],
+        #                                   'parallel' : True,
+        #                                   'ft_kwargs': {
+        #                                                 'fs'      : 1,
+        #                                                 'nperseg' : 2000,
+        #                                                 'noverlap': int(.8*2000)
+        #                                             },
+        #                                   'fooof_kwargs': {
+        #                                                     'es': {'return_params': [['aperiodic_params', 'exponent'],
+        #                                                                             ['aperiodic_params', 'knee'],
+        #                                                                             ['error'], # MAE
+        #                                                                             ['aperiodic_params', 'offset']],
+        #                                                             'fit_kwargs'  : {'aperiodic_mode': 'knee'}
+        #                                                     },
+        #                                                 }
+        #                                  },
+        #                 'num_trials'   : 4,
+        #                 'data_type'    : 'ising',
+        #                 }
+        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
+                'ramsey_kwargs' : {'n_iter'   : 10,
+                                    'n_pc'     : 0.8,
+                                    'pc_range' : [0,0.1],
+                                    'f_range'  : [0,0.01],
+                                    'parallel' : True,
+                                    'ft_kwargs': {
+                                                'fs'      : 1,
+                                                'nperseg' : 2000,
+                                                'noverlap': int(.8*2000)
+                                            },
+                                    'fooof_kwargs': {
+                                                    'es': {'return_params': [['aperiodic_params', 'exponent'],
+                                                                            ['aperiodic_params', 'knee'],
+                                                                            ['error'], # MAE
+                                                                            ['aperiodic_params', 'offset']],
+                                                            'fit_kwargs'  : {'aperiodic_mode': 'knee'}
                                                     },
-                                          'fooof_kwargs': {
-                                                            'es': {'return_params': [['aperiodic_params', 'exponent'],
-                                                                                    ['aperiodic_params', 'knee'],
-                                                                                    ['error'], # MAE
-                                                                                    ['aperiodic_params', 'offset']],
-                                                                    'fit_kwargs'  : {'aperiodic_mode': 'knee'}
-                                                            },
-                                                        }
-                                         },
-                        'num_trials'   : 4,
-                        'data_type'    : 'ising',
-                        }
+                                                }
+                                    },
+                'num_trials'   : 4,
+                'data_type'    : 'ising',
+                }
     os.environ['NUMEXPR_MAX_THREADS'] = str(analysis_args['ramsey_kwargs']['n_iter']) # otherwise numexpr knocks it down
     output_dir = analysis_args['output_dir']
 

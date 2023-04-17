@@ -168,6 +168,7 @@ class Ramsey:
             spectra := {evals, psd, psd_chan}
             fit_dict := {es_<fit_item>..., psd_<fit_item>...}
         """
+        N_JOBS = 1#cpu_count() 
         freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
         pcs   = np.arange(1,n_pc_sub+1)
 
@@ -199,9 +200,12 @@ class Ramsey:
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
         if self.parallel:
             results = []
-            n_outer = self.n_iter//n_parallel_jobs
+            # n_outer = self.n_iter//n_parallel_jobs
+            # DEBUG
+            n_outer = 1
+            n_parallel_jobs = self.n_iter
             for _ in range(n_outer):
-                curr_results = Parallel(n_jobs=cpu_count())(delayed(iter_task)() for _ in range(n_parallel_jobs)) # n_parallel_jobs should be equal to n_jobs
+                curr_results = Parallel(n_jobs=N_JOBS)(delayed(iter_task)() for _ in range(n_parallel_jobs)) # n_parallel_jobs should be equal to n_jobs
                 results = [*results, *curr_results]
         else: #probably local testing:
             results = [iter_task() for _ in range(self.n_iter)]
@@ -216,7 +220,7 @@ class Ramsey:
         es_fooof_kwargs, psd_fooof_kwargs = self.fooof_kwargs.get('es', {}), self.fooof_kwargs.get('psd', {})
         es_fit   = fooofy(pcs, evals_mat,      pc_range_sub, **es_fooof_kwargs)
         psd_fit1 = fooofy(freqs,  sum_powers_mat, self.f_range,  **psd_fooof_kwargs)
-        include_psd_fit2 = True #DEBUG
+        include_psd_fit2 = True
         try:
             psd_fit2_list= [fooofy(freqs, chan_powers_mat[:,chan], self.f_range, **psd_fooof_kwargs) 
                                                             for chan in range(subset_size)] # list comp here iterates over each neuron
