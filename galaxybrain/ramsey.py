@@ -119,7 +119,7 @@ class Ramsey:
         fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
         stats_      = defaultdict(lambda: np.zeros(n_subsets))
         if self.parallel:
-            self.logger.info(f'subset_iter: working with {cpu_count()} processors')
+            self.logger.info(f'working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
             self.logger.debug(f'subset {i+1}')
             n_pc_curr = int(self.n_pc*num)
@@ -131,7 +131,7 @@ class Ramsey:
                 pc_range_curr = [self.pc_range[0], int(n_pc_curr*self.pc_range[1])]
             # DEBUG can't fooof fit if range is too small
             if pc_range_curr[1] < 3:
-                self.logger.warning(f'subset_iter: skipping subset {num}')
+                self.logger.warning(f'skipping subset {num}')
                 continue
 
             spectra_i, results_i = self.random_subset_decomp(subset_size=num, n_pc_sub=n_pc_curr, pc_range_sub=pc_range_curr)
@@ -148,7 +148,7 @@ class Ramsey:
                     stats_[f'pearson_corr{it}'][i],  stats_[f'pearson_p{it}'][i]  = stats.pearsonr( results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                     stats_[f'spearman_corr{it}'][i], stats_[f'spearman_p{it}'][i] = stats.spearmanr(results_i['es_exponent'], results_i[f'psd_exponent{it}'])
                 except ValueError: # can't compute correlation
-                    self.logger.warning(f"self.subset_iter: NaNs at subset iter: {i}, num: {num}")
+                    self.logger.warning(f"NaNs at subset iter: {i}, num: {num}")
                 except KeyError: # skip psd_exponent nosum because of 0s spec
                     pass
 
@@ -158,7 +158,7 @@ class Ramsey:
                 **fit_results, 
                 **stats_}
 
-    def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub, n_parallel_jobs=10):
+    def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
         """
         returned data include 1 pca exponent and 2 PSD exponents
         performs iter_task of main computational load
@@ -168,7 +168,6 @@ class Ramsey:
             spectra := {evals, psd, psd_chan}
             fit_dict := {es_<fit_item>..., psd_<fit_item>...}
         """
-        N_JOBS = 1#cpu_count() 
         freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
         pcs   = np.arange(1,n_pc_sub+1)
 
@@ -181,9 +180,9 @@ class Ramsey:
 
             loc_array = np.sort(np.random.choice(data.shape[1], subset_size, replace=False))
             subset = np.array(data.iloc[:,loc_array]) #converted to array for testing jit
-            self.logger.debug('iter_task: starting fft')
+            self.logger.debug('starting fft')
             ft_results = ft(subset, **self.ft_kwargs)
-            self.logger.debug('iter_task: starting pca')
+            self.logger.debug('starting pca')
             with Pool(processes=1) as pool:
                 res = pool.apply_async(pca, (subset, n_pc_sub))
                 while True:
@@ -200,13 +199,14 @@ class Ramsey:
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
         if self.parallel:
             results = []
-            # n_outer = self.n_iter//n_parallel_jobs
-            # DEBUG
-            n_outer = 1
-            n_parallel_jobs = self.n_iter
-            for _ in range(n_outer):
-                curr_results = Parallel(n_jobs=N_JOBS)(delayed(iter_task)() for _ in range(n_parallel_jobs)) # n_parallel_jobs should be equal to n_jobs
+            n_desired, n_available = 10, cpu_count()
+            n_batch = self.n_iter//n_desired
+            for _ in range(n_batch):
+                self.logger.info('commencing a batch')
+                curr_results = Parallel(n_jobs=n_available)(delayed(iter_task)() for _ in range(n_desired)) # n_parallel_jobs should be equal to n_jobs
+                self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
+                time.sleep(1)
         else: #probably local testing:
             results = [iter_task() for _ in range(self.n_iter)]
 
@@ -230,7 +230,7 @@ class Ramsey:
                     psd_fit2[key].append(params)
             psd_fit2 = {k:np.mean(v, axis=0) for k,v in psd_fit2.items()}
         except Exception as e: # Fitting fails because the input power spectra data is mostly 0s (after logging, contains NaNs or Infs) 
-            self.logger.warning(f'random_subset_decomp: could not get summed psd at {subset_size}')
+            self.logger.warning(f'could not get summed psd at {subset_size}')
             include_psd_fit2 = False
 
         spectra = {'evals':evals_mat,'psd':sum_powers_mat, 'psd_chan':chan_powers_mat}

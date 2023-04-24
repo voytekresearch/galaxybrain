@@ -14,6 +14,6 @@ def init_log(node):
     logger.setLevel(logging.DEBUG)
 
     file_handler = logging.FileHandler(log_path)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s at %(filename)s: %(message)s'))
+    file_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s at %(filename)s %(funcName)s(): %(message)s'))
     logger.addHandler(file_handler)
     return logger
