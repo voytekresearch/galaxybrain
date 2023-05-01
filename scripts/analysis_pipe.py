@@ -31,7 +31,7 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
     elif data_type == 'ising':
         with h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r') as f:
             ising_h5 = {k: np.array(f[k]) for k in f.keys()}
-        labels = list(ising_h5.keys())[:] # these are str temperatures NOTE for limited temps
+        labels = list(ising_h5.keys())[4:8] # these are str temperatures NOTE for limited temps
         del ising_h5
         gc.collect()
         def get_function(label):
@@ -56,18 +56,13 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
 
 
     for label in labels:
-        logger.info(label)
+        logger.info('label: ', label)
         try:
             os.makedirs(f'{output_dir}/{label}')
         except FileExistsError:
             pass
         if mpi_args:
-            if mpi_args['MY_RANK'] != 0: # maps to trial number
-                mpi_args['COMM'].send(trial_task(mpi_args['MY_RANK'], label), dest=0)
-            else:
-                trial_task(mpi_args['MY_RANK'], label)
-                for t in range(1, mpi_args['NUM_TRIAL']):
-                    mpi_args['COMM'].recv(source=t)
+            trial_task(mpi_args['MY_RANK'], label)
         else:
             for t in range(num_trials):
                 trial_task(t, label)
@@ -173,7 +168,7 @@ def main():
         #                 'data_type'    : 'ising',
         #                 }
         analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
-                'ramsey_kwargs' : {'n_iter'   : 10,
+                'ramsey_kwargs' : {'n_iter'   : 50,
                                     'n_pc'     : 0.8,
                                     'pc_range' : [0,0.1],
                                     'f_range'  : [0,0.01],

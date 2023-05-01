@@ -3,12 +3,16 @@ from collections import defaultdict
 from fooof import FOOOFGroup, FOOOF
 from scipy import stats
 from neurodsp.spectral import compute_spectrum
-from joblib import Parallel, delayed, cpu_count
+import subprocess
+if 'sdsc' in subprocess.run('hostname', capture_output=True).stdout.decode('utf8'):
+    from mpi4py.futures import MPIPoolExecutor as Executor
+else:
+    from concurrent.futures import ProcessPoolExecutor as Executor
+from multiprocessing import Pool, TimeoutError, cpu_count
 import warnings
 warnings.filterwarnings("ignore")
 import time
 import gc
-from multiprocessing import Pool, TimeoutError
 
 
 def fooofy(components, spectra, fit_range, group=True, fit_kwargs={}, return_params='default'):
@@ -175,7 +179,7 @@ class Ramsey:
         sum_powers_mat  = np.empty((self.n_iter, len(freqs)))
         chan_powers_mat = np.empty((self.n_iter, subset_size, len(freqs)))
 
-        def iter_task():
+        def iter_task(_):
             data = self.data[0](self.data[1])
 
             loc_array = np.sort(np.random.choice(data.shape[1], subset_size, replace=False))
@@ -203,7 +207,8 @@ class Ramsey:
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
-                curr_results = Parallel(n_jobs=n_available)(delayed(iter_task)() for _ in range(n_desired)) # n_parallel_jobs should be equal to n_jobs
+                with Executor(max_wrokers=n_available) as e:
+                    curr_results = list(e.map(iter_task, range(n_desired)))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
                 time.sleep(1)
