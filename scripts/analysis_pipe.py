@@ -56,7 +56,7 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
 
 
     for label in labels:
-        logger.info('label: ', label)
+        logger.info(f'label: {label}')
         try:
             os.makedirs(f'{output_dir}/{label}')
         except FileExistsError:

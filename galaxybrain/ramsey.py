@@ -207,7 +207,7 @@ class Ramsey:
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
-                with Executor(max_wrokers=n_available) as e:
+                with Executor(max_workers=n_available) as e:
                     curr_results = list(e.map(iter_task, range(n_desired)))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
