@@ -5,8 +5,10 @@ from scipy import stats
 from neurodsp.spectral import compute_spectrum
 import subprocess
 if 'sdsc' in subprocess.run('hostname', capture_output=True).stdout.decode('utf8'):
+    using_mpi_pool = True
     from mpi4py.futures import MPIPoolExecutor as Executor
 else:
+    using_mpi_pool = False
     from concurrent.futures import ProcessPoolExecutor as Executor
 from multiprocessing import Pool, TimeoutError, cpu_count
 import warnings
@@ -101,7 +103,9 @@ class Ramsey:
         self.fooof_kwargs = fooof_kwargs
         self.data_type = data_type
         self.parallel = parallel
-
+        if using_mpi_pool:
+            self.logger.info('using MPIPoolExecutor')
+            
     def subset_iter(self):
         """Do random_subset_decomp over incrementing subset sizes
         slope dims: n_iter * amount of subset sizes
@@ -187,15 +191,7 @@ class Ramsey:
             self.logger.debug('starting fft')
             ft_results = ft(subset, **self.ft_kwargs)
             self.logger.debug('starting pca')
-            with Pool(processes=1) as pool:
-                res = pool.apply_async(pca, (subset, n_pc_sub))
-                while True:
-                    try:
-                        pca_results = res.get(timeout=10)
-                        break
-                    except TimeoutError:
-                        self.logger.warning('pool async timed out')
-
+            pca_results = pca(subset, n_pc_sub)
             del subset, data
             gc.collect()
             return (pca_results, *ft_results)
