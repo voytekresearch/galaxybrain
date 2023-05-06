@@ -105,7 +105,7 @@ class Ramsey:
         self.parallel = parallel
         if using_mpi_pool:
             self.logger.info('using MPIPoolExecutor')
-            
+
     def subset_iter(self):
         """Do random_subset_decomp over incrementing subset sizes
         slope dims: n_iter * amount of subset sizes
@@ -194,12 +194,13 @@ class Ramsey:
             pca_results = pca(subset, n_pc_sub)
             del subset, data
             gc.collect()
+            time.sleep(0.1)
             return (pca_results, *ft_results)
         
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
         if self.parallel:
             results = []
-            n_desired, n_available = 10, cpu_count()
+            n_desired, n_available = 5, cpu_count()
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
@@ -207,7 +208,7 @@ class Ramsey:
                     curr_results = list(e.map(iter_task, range(n_desired)))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
-                time.sleep(1)
+                time.sleep(0.1)
         else: #probably local testing:
             results = [iter_task() for _ in range(self.n_iter)]
 
