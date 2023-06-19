@@ -208,7 +208,7 @@ class Ramsey:
                     curr_results = list(e.map(iter_task, range(n_desired)))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
-                time.sleep(0.1)
+                time.sleep(1)
         else: #probably local testing:
             results = [iter_task() for _ in range(self.n_iter)]
 
