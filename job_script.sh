@@ -18,4 +18,4 @@ rm -rf $exp_dir
 mkdir $exp_dir
 # -np corresponds to num_trials
 echo "`date` BEGIN \n" >> ${LOG_PATH}
-cd $ROOT && mpirun -v -machinefile $PBS_NODEFILE -np 4 --map-by ppr:1:node python ${ROOT}/main.py -i -p >> ${LOG_PATH} 2>&1
+cd $ROOT && mpirun -v -machinefile $PBS_NODEFILE -np 40 --map-by ppr:10:node python ${ROOT}/main.py -i -p >> ${LOG_PATH} 2>&1
