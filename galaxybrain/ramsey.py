@@ -200,7 +200,7 @@ class Ramsey:
         # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
         if self.parallel:
             results = []
-            n_desired= 5
+            n_desired= 10
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
