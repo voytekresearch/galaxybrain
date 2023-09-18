@@ -186,7 +186,7 @@ class Ramsey:
         def iter_task(_):
             data = self.data[0](self.data[1])
 
-            loc_array = np.sort(np.random.choice(data.shape[1], subset_size, replace=False))
+            loc_array = np.sort(np.random.choice(data.shape[1], subset_size))
             subset = np.array(data.iloc[:,loc_array]) #converted to array for testing jit
             self.logger.debug('starting fft')
             ft_results = ft(subset, **self.ft_kwargs)

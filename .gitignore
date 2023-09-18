@@ -7,3 +7,4 @@ data/experiments/
 data/spikes/
 .vscode
 *.log
+job_script.sh

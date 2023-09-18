@@ -1,0 +1,9 @@
+{
+    "NUM_NODES" : 4,
+    "NUM_PROC" : 10,
+    "WALLTIME" : "1:00:00",
+    "PROJECT_ROOT" : "/home/brirry/galaxybrain",
+    "DATA_DIR_POSTFIX": "data/experiments/ising",
+    "LOG_PATH" : "/home/brirry/logs/analysis.log",
+    "ANALYSIS_TYPE" : ["ising", "mpi"]
+}

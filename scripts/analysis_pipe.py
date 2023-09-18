@@ -10,14 +10,12 @@ from galaxybrain.ising import tensor_to_raster
 from galaxybrain.data_utils import MouseData, shuffle_data
 from galaxybrain import ramsey
 from log_utils.logs import init_log
-import logging
 import gc
-import warnings
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 HERE_DIR = Path(__file__).parent.absolute()
 
-def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse_kwargs={}, shuffle=False, mpi_args={}):
+def run_analysis(output_dir, logger, num_trials, data_type, shuffle, ramsey_kwargs, mouse_kwargs={}, mpi_args={}):
     """
     ramsey_kwargs: dict
     shuffle = (axis, num_shuffles)
@@ -27,7 +25,8 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
     if data_type == 'mouse':
         mice_data = MouseData(**mouse_kwargs)
         labels = mice_data.get_labels() # labels of form (mouse-name_region-name)
-        get_function = lambda label: mice_data.get_spikes(label=label)
+        def get_function(label): 
+            return mice_data.get_spikes(label=label)
     elif data_type == 'ising':
         with h5py.File(str(HERE_DIR/'../data/spikes/ising.hdf5'), 'r') as f:
             ising_h5 = {k: np.array(f[k]) for k in f.keys()}
@@ -85,7 +84,7 @@ def run_analysis(output_dir, logger, num_trials, ramsey_kwargs, data_type, mouse
             
 def main():
 
-    DEBUG = 1
+    DEBUG = True
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', dest='mouse', action='store_true')
