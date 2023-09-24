@@ -10,7 +10,7 @@ if 'sdsc' in subprocess.run('hostname', capture_output=True).stdout.decode('utf8
 else:
     using_mpi_pool = False
     from concurrent.futures import ProcessPoolExecutor as Executor
-from multiprocessing import Pool, TimeoutError, cpu_count
+from multiprocessing import cpu_count
 import warnings
 warnings.filterwarnings("ignore")
 import time
@@ -39,6 +39,11 @@ def fooofy(components, spectra, fit_range, group=True, fit_kwargs={}, return_par
     return {p[-1]: fg.get_params(*p) 
                     for p in return_params}
 
+
+def svd(data):
+    s = np.linalg.svd(data, compute_uv=False)
+    eigs = np.square(s)
+    return eigs
 
 def pca(data, n_pc=None):
     """
@@ -82,8 +87,19 @@ def ft(subset, **ft_kwargs):
     return powers_summed, powers_chans
 
 
+def random_subset_decomp_task(self, subset_size, n_pc_sub):
+    df_shape = self.data.shape[1]
+    loc_array = np.sort(np.random.choice(df_shape, subset_size))
+    subset = np.array(self.data.iloc[:,loc_array]) #converted to array for testing jit
+    self.logger.debug('starting fft')
+    ft_results = ft(subset, **self.ft_kwargs)
+    self.logger.debug('starting pca')
+    svd_results = svd(subset[:n_pc_sub])
+    return (svd_results, *ft_results)
+    
+
 class Ramsey:
-    def __init__(self, logger, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, fooof_kwargs={}, data_type='mouse', parallel=True):
+    def __init__(self, logger, data, n_iter, n_pc, ft_kwargs, pc_range, f_range, num_proc, fooof_kwargs={}, data_type='mouse'):
         """
         f_range: range of frequencies to fit (default freqs usually go up to 0.5) or None
         fooof_kwargs = { 'es' : {
@@ -102,7 +118,7 @@ class Ramsey:
         self.f_range = f_range # TODO make input percentages, then transform here
         self.fooof_kwargs = fooof_kwargs
         self.data_type = data_type
-        self.parallel = parallel
+        self.num_proc = num_proc # parallel
         if using_mpi_pool:
             self.logger.info('using MPIPoolExecutor')
 
@@ -119,14 +135,12 @@ class Ramsey:
             subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
         elif self.data_type == 'ising':
             subset_sizes = np.linspace(100, data.shape[1], 10, dtype=int)
-        del data
-        gc.collect()
         eigs        = []
         powers_sum  = []
         n_subsets     = len(subset_sizes)
         fit_results = defaultdict(lambda: np.zeros((self.n_iter, n_subsets)))
         stats_      = defaultdict(lambda: np.zeros(n_subsets))
-        if self.parallel:
+        if self.num_proc:
             self.logger.info(f'working with {cpu_count()} processors')
         for i, num in enumerate(subset_sizes):
             self.logger.debug(f'subset {i+1}')
@@ -166,6 +180,7 @@ class Ramsey:
                 **fit_results, 
                 **stats_}
 
+    
     def random_subset_decomp(self, subset_size, n_pc_sub, pc_range_sub):
         """
         returned data include 1 pca exponent and 2 PSD exponents
@@ -183,34 +198,25 @@ class Ramsey:
         sum_powers_mat  = np.empty((self.n_iter, len(freqs)))
         chan_powers_mat = np.empty((self.n_iter, subset_size, len(freqs)))
 
-        def iter_task(_):
-            data = self.data[0](self.data[1])
-
-            loc_array = np.sort(np.random.choice(data.shape[1], subset_size))
-            subset = np.array(data.iloc[:,loc_array]) #converted to array for testing jit
-            self.logger.debug('starting fft')
-            ft_results = ft(subset, **self.ft_kwargs)
-            self.logger.debug('starting pca')
-            pca_results = pca(subset, n_pc_sub)
-            del subset, data
-            gc.collect()
-            time.sleep(0.1)
-            return (pca_results, *ft_results)
-        
-        # TODO make sure n_jobs doesn't need to correspond to num delayed tasks
-        if self.parallel:
+        if self.num_proc:
+            df_shape = self.data[0](self.data[1])
             results = []
-            n_desired= 10
+            n_desired = self.num_proc
+            map_args = [
+                (self, subset_size, n_pc_sub)
+                for _ in range(n_desired)
+            ]
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
                 with Executor(max_workers=n_desired) as e:
-                    curr_results = list(e.map(iter_task, range(n_desired)))
+                    curr_results = list(e.map(\
+                        random_subset_decomp_task,
+                        map_args))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
-                time.sleep(1)
         else: #probably local testing:
-            results = [iter_task() for _ in range(self.n_iter)]
+            results = [random_subset_decomp_task(subset_size, n_pc_sub) for _ in range(self.n_iter)]
 
 
         evals, powers_sum, powers_chans = list(zip(*results))

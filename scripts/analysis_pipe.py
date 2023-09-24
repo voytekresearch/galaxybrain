@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sys, os
 import json
+import yaml
 import h5py
 import argparse
 from pathlib import Path
@@ -14,6 +15,8 @@ import gc
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 HERE_DIR = Path(__file__).parent.absolute()
+OUTPUT_DIR_ROOT = str(HERE_DIR/'../data/experiments')
+
 
 def run_analysis(output_dir, logger, num_trials, data_type, shuffle, ramsey_kwargs, mouse_kwargs={}, mpi_args={}):
     """
@@ -103,92 +106,26 @@ def main():
     else:
         logger = init_log(None)
     if DEBUG:
-        cl_args.ising = True
+        cl_args.test = True
     logger.info('Begin')
+    # TODO read yaml file, overwrite values if not on cluster (e.g, num_trials)
+    with open('pipeline_config.yaml', 'r') as f:
+        pipeline_args = yaml.safe_load(f)
+        analysis_args_main = pipeline_args['analysis_args']
+
     #Parallel stuff
     # There are 28 cores
     if cl_args.test:
-        analysis_args = {'output_dir' :  str(HERE_DIR/'../data/experiments/TEST'),
-                        'mouse_kwargs': {'phantom':True},
-                        'ramsey_kwargs' : {
-                                            'n_iter': 5, 
-                                            'n_pc': 0.8, 
-                                            'pc_range': [0, None],
-                                            'f_range': [0,0.4],
-                                            'ft_kwargs': {
-                                                            'fs'      : 1,
-                                                            'nperseg' : 120,
-                                                            'noverlap': 120/2
-                                                        }
-                                        },
-                        'num_trials' : 5,
-                        'data_type': 'mouse',
-                        }
+        analysis_args = analysis_args_main['test']
+        analysis_args['output_dir'] = os.path.join(OUTPUT_DIR_ROOT, 'TEST')
     elif cl_args.mouse:
-        analysis_args = {'output_dir' :  str(HERE_DIR/'../data/experiments/mouse'),
-                        'mouse_kwargs': {'mouse_in'  : ['waksman']},
-                        'ramsey_kwargs' : {
-                                            'n_iter': 95, 
-                                            'n_pc': 0.8, 
-                                            'pc_range': [0, None],
-                                            'f_range': [0,0.4],
-                                            'ft_kwargs': {
-                                                            'fs'      : 1,
-                                                            'nperseg' : 120,
-                                                            'noverlap': 120/2
-                                                        }
-                                        },
-                         'num_trials' : 4,
-                        'data_type': 'mouse',
-                        }
-    #DEBUG args
+        analysis_args['output_dir'] = os.path.join(OUTPUT_DIR_ROOT, 'mouse')
     elif cl_args.ising:
-        # analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
-        #                'ramsey_kwargs' : {'n_iter'   : 100,
-        #                                   'n_pc'     : 0.8,
-        #                                   'pc_range' : [0,0.1],
-        #                                   'f_range'  : [0,0.01],
-        #                                   'parallel' : True,
-        #                                   'ft_kwargs': {
-        #                                                 'fs'      : 1,
-        #                                                 'nperseg' : 2000,
-        #                                                 'noverlap': int(.8*2000)
-        #                                             },
-        #                                   'fooof_kwargs': {
-        #                                                     'es': {'return_params': [['aperiodic_params', 'exponent'],
-        #                                                                             ['aperiodic_params', 'knee'],
-        #                                                                             ['error'], # MAE
-        #                                                                             ['aperiodic_params', 'offset']],
-        #                                                             'fit_kwargs'  : {'aperiodic_mode': 'knee'}
-        #                                                     },
-        #                                                 }
-        #                                  },
-        #                 'num_trials'   : 4,
-        #                 'data_type'    : 'ising',
-        #                 }
-        analysis_args={'output_dir'    : str(HERE_DIR/'../data/experiments/ising'),
-                'ramsey_kwargs' : {'n_iter'   : 50,
-                                    'n_pc'     : 0.8,
-                                    'pc_range' : [0,0.1],
-                                    'f_range'  : [0,0.01],
-                                    'parallel' : True,
-                                    'ft_kwargs': {
-                                                'fs'      : 1,
-                                                'nperseg' : 2000,
-                                                'noverlap': int(.8*2000)
-                                            },
-                                    'fooof_kwargs': {
-                                                    'es': {'return_params': [['aperiodic_params', 'exponent'],
-                                                                            ['aperiodic_params', 'knee'],
-                                                                            ['error'], # MAE
-                                                                            ['aperiodic_params', 'offset']],
-                                                            'fit_kwargs'  : {'aperiodic_mode': 'knee'}
-                                                    },
-                                                }
-                                    },
-                'num_trials'   : 4,
-                'data_type'    : 'ising',
-                }
+        analysis_args['output_dir'] = os.path.join(OUTPUT_DIR_ROOT, 'ising')
+
+    analysis_args['num_trials'] = pipeline_args['job_args']['NUM_NODES']
+    analysis_args['ramsey_kwargs']['num_proc'] = pipeline_args['job_args']['NUM_PROC']
+
     os.environ['NUMEXPR_MAX_THREADS'] = str(analysis_args['ramsey_kwargs']['n_iter']) # otherwise numexpr knocks it down
     output_dir = analysis_args['output_dir']
 

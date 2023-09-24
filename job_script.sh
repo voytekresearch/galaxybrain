@@ -9,7 +9,6 @@
 #PBS -M barry.brian.f@gmail.com
 #PBS -m abe
 
-rm -rf /home/brirry/galaxybrain/data/experiments/ising
-mkdir /home/brirry/galaxybrain/data/experiments/ising
+rm -rf /home/brirry/galaxybrain/data/experiments/ising/*
 echo "`date` BEGIN \n" >> /home/brirry/logs/analysis.log
 cd /home/brirry/galaxybrain && mpirun -v -machinefile $PBS_NODEFILE -np 4 --map-by ppr:10:node python /home/brirry/galaxybrain/main.py -i -p  >> /home/brirry/logs/analysis.log 2>&1

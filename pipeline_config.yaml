@@ -1,0 +1,60 @@
+job_args: # all of these are read for job_script.sh
+  NUM_NODES : 4
+  NUM_PROC : 2
+  WALLTIME : "1:00:00"
+  PROJECT_ROOT : /home/brirry/galaxybrain
+  DATA_DIR_POSTFIX: data/experiments/ising
+  LOG_PATH : /home/brirry/logs/analysis.log
+  ANALYSIS_TYPE : [ising, mpi]
+
+analysis_args:
+  test:
+    data_type: mouse
+    shuffle: False
+    mouse_kwargs:
+      phantom: True
+    ramsey_kwargs:
+      n_iter: 10
+      n_pc: 0.8
+      pc_range: [0, null]
+      f_range: [0, 0.4]
+      ft_kwargs:
+        fs      : 1
+        nperseg : 120
+        noverlap: 60
+                
+  mouse:
+    data_type: mouse
+    shuffle: False
+    mouse_kwargs:
+      mouse_in: [waksman]
+    ramsey_kwargs: 
+      n_iter: 95
+      n_pc: 0.8
+      pc_range: [0, null]
+      f_range: [0, 0.4]
+      ft_kwargs: 
+        fs      : 1
+        nperseg : 120
+        noverlap: 60
+
+  ising:
+    data_type    : ising
+    shuffle: False
+    ramsey_kwargs: 
+      n_iter   : 50
+      n_pc     : 0.8
+      pc_range : [0, 0.1]
+      f_range  : [0, 0.01]
+      ft_kwargs: 
+        fs      : 1
+        nperseg : 2000
+        noverlap: 1600 #int(.8*2000)
+      fooof_kwargs: 
+        es:
+          return_params: [[aperiodic_params, exponent],
+                          [aperiodic_params, knee],
+                          [error], # MAE
+                          [aperiodic_params, offset]]
+          fit_kwargs: 
+            aperiodic_mode: knee
