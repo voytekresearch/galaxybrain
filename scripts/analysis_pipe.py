@@ -46,7 +46,7 @@ def run_analysis(output_dir, logger, num_trials, data_type, shuffle, ramsey_kwar
         logger.info(f'trial {t+1}')
         if not shuffle:
             curr_raster = get_function(label)
-            results = ramsey.Ramsey(data=(get_function, label), **ramsey_kwargs, data_type=data_type, logger=logger).subset_iter()
+            results = ramsey.Ramsey(data=get_function(label), **ramsey_kwargs, data_type=data_type, logger=logger).subset_iter()
             np.savez(f'{output_dir}/{label}/{t+1}', **results)
         if shuffle:
             results = []
@@ -85,16 +85,10 @@ def run_analysis(output_dir, logger, num_trials, data_type, shuffle, ramsey_kwar
     #                                                             pearson_p2=curr_output[:,16].mean(0), spearman_p2=curr_output[:,18].mean(0))
 
             
-def main():
+def main(cl_args):
 
     DEBUG = True
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-m', dest='mouse', action='store_true')
-    parser.add_argument('-t', dest='test',  action='store_true') # test mouse
-    parser.add_argument('-i', dest='ising', action='store_true')
-    parser.add_argument('-p', dest='mpi', action='store_true')
-    cl_args = parser.parse_args()
     mpi_args = {}
     if cl_args.mpi:
         from mpi4py import MPI

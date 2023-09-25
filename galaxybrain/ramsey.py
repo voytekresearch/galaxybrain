@@ -129,7 +129,7 @@ class Ramsey:
         returns: eigs, pows (2D)
         fit results and stats
         """
-        data = self.data[0](self.data[1])
+        data = self.data
 
         if self.data_type == 'mouse':
             subset_sizes = np.linspace(30, data.shape[1], 16, dtype=int)
@@ -199,25 +199,24 @@ class Ramsey:
         chan_powers_mat = np.empty((self.n_iter, subset_size, len(freqs)))
 
         if self.num_proc:
-            df_shape = self.data[0](self.data[1])
             results = []
             n_desired = self.num_proc
-            map_args = [
-                (self, subset_size, n_pc_sub)
-                for _ in range(n_desired)
-            ]
+            map_args = [[], [], []]
+            for _ in range(n_desired):
+                map_args[0].append(self)
+                map_args[1].append(subset_size)
+                map_args[2].append(n_pc_sub)
             n_batch = self.n_iter//n_desired
             for _ in range(n_batch):
                 self.logger.info('commencing a batch')
                 with Executor(max_workers=n_desired) as e:
                     curr_results = list(e.map(\
                         random_subset_decomp_task,
-                        map_args))
+                        map_args[0], map_args[1], map_args[2]))
                 self.logger.info(f'results len {len(curr_results)}')
                 results = [*results, *curr_results]
         else: #probably local testing:
-            results = [random_subset_decomp_task(subset_size, n_pc_sub) for _ in range(self.n_iter)]
-
+            results = [random_subset_decomp_task(self, subset_size, n_pc_sub) for _ in range(self.n_iter)]
 
         evals, powers_sum, powers_chans = list(zip(*results))
         for i in range(self.n_iter):
