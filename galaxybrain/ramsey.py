@@ -190,6 +190,15 @@ class Ramsey:
         Returns
             spectra := {evals, psd, psd_chan}
             fit_dict := {es_<fit_item>..., psd_<fit_item>...}
+
+            
+
+
+        TODO VERIFY ROW/COL MAJOR ORDER
+
+        
+        
+
         """
         freqs = np.fft.rfftfreq(self.ft_kwargs['nperseg'])
         pcs   = np.arange(1,n_pc_sub+1)

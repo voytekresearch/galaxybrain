@@ -21,7 +21,7 @@ analysis_args:
       ft_kwargs:
         fs      : 1
         nperseg : 120
-        noverlap: 60
+        noverlap: 60 # nperseg/2
                 
   mouse:
     data_type: mouse
